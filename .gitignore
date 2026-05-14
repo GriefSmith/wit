@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# macOS
+.DS_Store
+
+# Temp files written by atomic write helper
+.wit-*.tmp
+
+# Editor / IDE
+.idea/
+.vscode/
+
+# ── Data ──────────────────────────────────────────────────────────────────────
+# Ship only sample-*.md at the root of data/pages/. Everything else there
+# (manuscripts, images, exports, editor state under .wit/, nested folders) stays
+# local so creator works are never pushed to this repository by accident.
+data/pages/*
+!data/pages/sample-*.md

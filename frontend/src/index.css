@@ -1,0 +1,1920 @@
+/* Typography + palette: minimal editor / markdown notebook */
+
+:host,
+:root {
+  --wit-font-code: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+  --wit-font-mono: var(--wit-font-code);
+  /* Read/edit vs chrome: two distinct families; every preset overrides both. */
+  --wit-font-editor: var(--wit-font-code);
+  --wit-font-sidebar:
+    'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Body size for the page editor only (gear “Size”); dashboard chrome uses fixed rem steps. */
+  --wit-editor-body-font-size: 1rem;
+  --wit-paper: #f7f4eb;
+  --wit-paper-ink: #252219;
+  --wit-paper-muted: #5c574e;
+  --wit-paper-border: color-mix(in srgb, var(--wit-paper-ink) 14%, transparent);
+  --wit-paper-input: #fdfcf7;
+  --wit-paper-code-bg: #ebe4d4;
+
+  /* Matte charcoal (not pure black) — improves contrast vs warm ink. */
+  --wit-dark-bg: #1c1c1c;
+  --wit-dark-ink: #d8d3ca;
+  --wit-dark-muted: #8a8580;
+  --wit-dark-border: #3a3a3a;
+  --wit-dark-input: #141414;
+  --wit-dark-code-bg: #252525;
+
+  /* Accent defaults (light + dark) */
+  --wit-accent-ink-light: #3d5a4a;
+  --wit-accent-bg-light: #3d5a4a;
+  --wit-accent-bg-hover-light: #334e41;
+  --wit-accent-focus-light: rgba(61, 90, 74, 0.35);
+  --wit-accent-inverse-light: #fdfcf7;
+  --wit-accent-tint-light: rgba(180, 140, 60, 0.28);
+  --wit-accent-selected-light: rgba(61, 90, 74, 0.16);
+
+  --wit-accent-ink-dark: #b8c2d4;
+  --wit-accent-bg-dark: #3f4a5c;
+  --wit-accent-bg-hover-dark: #4b576b;
+  --wit-accent-focus-dark: rgba(184, 194, 212, 0.44);
+  --wit-accent-inverse-dark: #0b0e13;
+  --wit-accent-tint-dark: rgba(120, 136, 164, 0.31);
+  --wit-accent-selected-dark: #323c4c;
+
+  --pico-font-family: var(--wit-font-sidebar);
+  --pico-font-family-monospace: var(--wit-font-code);
+  --pico-line-height: 1.65;
+  --pico-border-radius: 2px;
+}
+
+/* Optional typography presets: `data-font-preset` on <html> (set by Settings). */
+html[data-font-preset='literary'] {
+  --wit-font-editor:
+    'Lora', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
+  --wit-font-sidebar:
+    'Source Serif 4', 'Apple Garamond', Garamond, Georgia, 'Times New Roman', serif;
+}
+
+html[data-font-preset='document'] {
+  --wit-font-editor:
+    'IBM Plex Sans', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --wit-font-sidebar:
+    'Atkinson Hyperlegible', 'IBM Plex Sans', system-ui, 'Segoe UI', sans-serif;
+}
+
+html[data-font-preset='plain'] {
+  --wit-font-editor:
+    'Atkinson Hyperlegible', 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --wit-font-sidebar:
+    'IBM Plex Sans', system-ui, 'Segoe UI', 'Atkinson Hyperlegible', sans-serif;
+}
+
+/* Page editor body scale only (`data-text-size` on <html>); sidebar/header stay on fixed rem steps. */
+html[data-text-size='large'] {
+  --wit-editor-body-font-size: 1.14rem;
+}
+
+html[data-text-size='granny'] {
+  --wit-editor-body-font-size: 1.3rem;
+}
+
+/* Light — warm paper */
+:root:not([data-theme='dark']),
+[data-theme='light'] {
+  color-scheme: light;
+  --pico-background-color: var(--wit-paper);
+  --pico-color: var(--wit-paper-ink);
+  --pico-muted-color: var(--wit-paper-muted);
+  --pico-muted-border-color: var(--wit-paper-border);
+  --pico-text-selection-color: var(--wit-accent-tint-light);
+
+  --pico-primary: var(--wit-accent-ink-light);
+  --pico-primary-background: var(--wit-accent-bg-light);
+  --pico-primary-hover: color-mix(in srgb, var(--wit-accent-ink-light) 78%, black);
+  --pico-primary-hover-background: var(--wit-accent-bg-hover-light);
+  --pico-primary-focus: var(--wit-accent-focus-light);
+  --pico-primary-inverse: var(--wit-accent-inverse-light);
+
+  --pico-secondary: #6b6458;
+  --pico-secondary-background: #8a8174;
+  --pico-secondary-hover-background: #756c61;
+
+  --pico-contrast: var(--wit-paper-ink);
+  --pico-contrast-background: #2a2620;
+  --pico-contrast-hover-background: #1a1815;
+  --pico-contrast-inverse: var(--wit-paper);
+
+  --pico-h1-color: #1e1c18;
+  --pico-h2-color: #252219;
+  --pico-h3-color: var(--wit-paper-ink);
+  --pico-h4-color: #2f2c26;
+  --pico-h5-color: #3a362f;
+  --pico-h6-color: var(--wit-paper-muted);
+
+  --pico-mark-background-color: rgba(220, 190, 120, 0.35);
+  --pico-mark-color: var(--wit-paper-ink);
+  --pico-code-background-color: var(--wit-paper-code-bg);
+  --pico-code-color: #4a453d;
+
+  --pico-form-element-background-color: var(--wit-paper-input);
+  --pico-form-element-border-color: color-mix(in srgb, var(--wit-paper-ink) 18%, transparent);
+  --pico-form-element-color: var(--wit-paper-ink);
+  --pico-form-element-active-background-color: #fffefc;
+
+  --pico-card-background-color: color-mix(in srgb, var(--wit-paper) 70%, #dcd3c4);
+  --pico-card-sectioning-background-color: color-mix(in srgb, var(--wit-paper) 55%, #d4cbb8);
+  --pico-card-border-color: var(--wit-paper-border);
+
+  --pico-dropdown-background-color: var(--wit-paper-input);
+  --pico-dropdown-border-color: var(--wit-paper-border);
+  --pico-dropdown-hover-background-color: rgba(90, 80, 60, 0.08);
+
+  --pico-box-shadow: none;
+  --pico-modal-overlay-background-color: rgba(60, 52, 40, 0.35);
+
+  --wit-chrome-surface: color-mix(in srgb, var(--wit-paper) 82%, #c9bdad);
+
+  --pico-del-color: #934038;
+}
+
+/* Optional accent presets for both themes:
+   add `data-accent="pine" | "mint" | "cyan" | "violet" | "amber"` on <html>. */
+[data-accent='pine'] {
+  --wit-accent-ink-light: #2f6f4e;
+  --wit-accent-bg-light: #2f6f4e;
+  --wit-accent-bg-hover-light: #275d41;
+  --wit-accent-focus-light: rgba(47, 111, 78, 0.34);
+  --wit-accent-inverse-light: #f7fff9;
+  --wit-accent-tint-light: rgba(70, 150, 100, 0.24);
+  --wit-accent-selected-light: rgba(47, 111, 78, 0.16);
+
+  --wit-accent-ink-dark: #78b38b;
+  --wit-accent-bg-dark: #1f6a44;
+  --wit-accent-bg-hover-dark: #287a52;
+  --wit-accent-focus-dark: rgba(120, 179, 139, 0.45);
+  --wit-accent-inverse-dark: #07120c;
+  --wit-accent-tint-dark: rgba(70, 150, 100, 0.34);
+  --wit-accent-selected-dark: #1a5a39;
+}
+
+[data-accent='mint'] {
+  --wit-accent-ink-light: #2e7568;
+  --wit-accent-bg-light: #2e7568;
+  --wit-accent-bg-hover-light: #255f55;
+  --wit-accent-focus-light: rgba(46, 117, 104, 0.34);
+  --wit-accent-inverse-light: #f6fffd;
+  --wit-accent-tint-light: rgba(90, 180, 150, 0.24);
+  --wit-accent-selected-light: rgba(46, 117, 104, 0.16);
+
+  --wit-accent-ink-dark: #7fceb0;
+  --wit-accent-bg-dark: #1e6f62;
+  --wit-accent-bg-hover-dark: #2a8173;
+  --wit-accent-focus-dark: rgba(127, 206, 176, 0.44);
+  --wit-accent-inverse-dark: #061310;
+  --wit-accent-tint-dark: rgba(90, 180, 150, 0.34);
+  --wit-accent-selected-dark: #165749;
+}
+
+[data-accent='cyan'] {
+  --wit-accent-ink-light: #2d5f78;
+  --wit-accent-bg-light: #2d5f78;
+  --wit-accent-bg-hover-light: #244f64;
+  --wit-accent-focus-light: rgba(45, 95, 120, 0.33);
+  --wit-accent-inverse-light: #f7fcff;
+  --wit-accent-tint-light: rgba(70, 145, 170, 0.23);
+  --wit-accent-selected-light: rgba(45, 95, 120, 0.16);
+
+  --wit-accent-ink-dark: #74c8e6;
+  --wit-accent-bg-dark: #1d5470;
+  --wit-accent-bg-hover-dark: #266382;
+  --wit-accent-focus-dark: rgba(116, 200, 230, 0.44);
+  --wit-accent-inverse-dark: #061017;
+  --wit-accent-tint-dark: rgba(70, 145, 170, 0.33);
+  --wit-accent-selected-dark: #19465a;
+}
+
+[data-accent='violet'] {
+  --wit-accent-ink-light: #5c4a98;
+  --wit-accent-bg-light: #5c4a98;
+  --wit-accent-bg-hover-light: #4e3f84;
+  --wit-accent-focus-light: rgba(92, 74, 152, 0.34);
+  --wit-accent-inverse-light: #fbf9ff;
+  --wit-accent-tint-light: rgba(120, 102, 190, 0.24);
+  --wit-accent-selected-light: rgba(92, 74, 152, 0.16);
+
+  --wit-accent-ink-dark: #b59ef0;
+  --wit-accent-bg-dark: #4a3a82;
+  --wit-accent-bg-hover-dark: #5b4997;
+  --wit-accent-focus-dark: rgba(181, 158, 240, 0.44);
+  --wit-accent-inverse-dark: #0f0a1c;
+  --wit-accent-tint-dark: rgba(120, 102, 190, 0.34);
+  --wit-accent-selected-dark: #3f3270;
+}
+
+[data-accent='amber'] {
+  --wit-accent-ink-light: #88561d;
+  --wit-accent-bg-light: #88561d;
+  --wit-accent-bg-hover-light: #724716;
+  --wit-accent-focus-light: rgba(136, 86, 29, 0.33);
+  --wit-accent-inverse-light: #fffaf2;
+  --wit-accent-tint-light: rgba(185, 130, 55, 0.23);
+  --wit-accent-selected-light: rgba(136, 86, 29, 0.16);
+
+  --wit-accent-ink-dark: #f0c57f;
+  --wit-accent-bg-dark: #7a4f1d;
+  --wit-accent-bg-hover-dark: #8c612a;
+  --wit-accent-focus-dark: rgba(240, 197, 127, 0.42);
+  --wit-accent-inverse-dark: #180f05;
+  --wit-accent-tint-dark: rgba(185, 130, 55, 0.31);
+  --wit-accent-selected-dark: #643f16;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --pico-background-color: var(--wit-dark-bg);
+    --pico-color: var(--wit-dark-ink);
+    --pico-muted-color: var(--wit-dark-muted);
+    --pico-muted-border-color: var(--wit-dark-border);
+    --pico-text-selection-color: var(--wit-accent-tint-dark);
+
+    --pico-primary: var(--wit-accent-ink-dark);
+    --pico-primary-background: var(--wit-accent-bg-dark);
+    --pico-primary-hover: color-mix(in srgb, var(--wit-accent-ink-dark) 82%, white);
+    --pico-primary-hover-background: var(--wit-accent-bg-hover-dark);
+    --pico-primary-focus: var(--wit-accent-focus-dark);
+    /* Filled buttons: light label on saturated accent (not wit-accent-inverse-dark). */
+    --pico-primary-inverse: #fff;
+    --pico-secondary-inverse: #fff;
+
+    --pico-secondary: #9ca398;
+    --pico-secondary-background: #4a5248;
+    --pico-secondary-hover-background: #5c665a;
+
+    --pico-contrast: var(--wit-dark-ink);
+    --pico-contrast-background: #eae6df;
+    --pico-contrast-hover-background: #ffffff;
+    --pico-contrast-inverse: #0d0d0d;
+
+    --pico-h1-color: #ece9e4;
+    --pico-h2-color: #e3dfd8;
+    --pico-h3-color: var(--wit-dark-ink);
+    --pico-h4-color: #cec9c2;
+    --pico-h5-color: #b8b3ac;
+    --pico-h6-color: var(--wit-dark-muted);
+
+    --pico-mark-background-color: rgba(80, 120, 90, 0.35);
+    --pico-mark-color: #eef1ee;
+    --pico-code-background-color: var(--wit-dark-code-bg);
+    --pico-code-color: #b5b0a8;
+
+    --pico-form-element-background-color: var(--wit-dark-input);
+    --pico-form-element-border-color: var(--wit-dark-border);
+    --pico-form-element-color: var(--wit-dark-ink);
+    --pico-form-element-active-background-color: #242424;
+    --pico-form-element-selected-background-color: color-mix(
+      in srgb,
+      var(--wit-accent-selected-dark) 58%,
+      var(--wit-dark-bg)
+    );
+
+    --pico-card-background-color: #222222;
+    --pico-card-sectioning-background-color: #2a2a2a;
+    --pico-card-border-color: var(--wit-dark-border);
+
+    --pico-dropdown-background-color: #1f1f1f;
+    --pico-dropdown-border-color: var(--wit-dark-border);
+    --pico-dropdown-hover-background-color: #2e2e2e;
+
+    --pico-box-shadow: none;
+    --pico-modal-overlay-background-color: rgba(0, 0, 0, 0.55);
+
+    --wit-chrome-surface: var(--wit-dark-bg);
+
+    --pico-del-color: #c9665c;
+  }
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --pico-background-color: var(--wit-dark-bg);
+  --pico-color: var(--wit-dark-ink);
+  --pico-muted-color: var(--wit-dark-muted);
+  --pico-muted-border-color: var(--wit-dark-border);
+  --pico-text-selection-color: var(--wit-accent-tint-dark);
+
+  --pico-primary: var(--wit-accent-ink-dark);
+  --pico-primary-background: var(--wit-accent-bg-dark);
+  --pico-primary-hover: color-mix(in srgb, var(--wit-accent-ink-dark) 82%, white);
+  --pico-primary-hover-background: var(--wit-accent-bg-hover-dark);
+  --pico-primary-focus: var(--wit-accent-focus-dark);
+  --pico-primary-inverse: #fff;
+  --pico-secondary-inverse: #fff;
+
+  --pico-secondary: #9ca398;
+  --pico-secondary-background: #4a5248;
+  --pico-secondary-hover-background: #5c665a;
+
+  --pico-contrast: var(--wit-dark-ink);
+  --pico-contrast-background: #eae6df;
+  --pico-contrast-hover-background: #ffffff;
+  --pico-contrast-inverse: #0d0d0d;
+
+  --pico-h1-color: #ece9e4;
+  --pico-h2-color: #e3dfd8;
+  --pico-h3-color: var(--wit-dark-ink);
+  --pico-h4-color: #cec9c2;
+  --pico-h5-color: #b8b3ac;
+  --pico-h6-color: var(--wit-dark-muted);
+
+  --pico-mark-background-color: rgba(80, 120, 90, 0.35);
+  --pico-mark-color: #eef1ee;
+  --pico-code-background-color: var(--wit-dark-code-bg);
+  --pico-code-color: #b5b0a8;
+
+  --pico-form-element-background-color: var(--wit-dark-input);
+  --pico-form-element-border-color: var(--wit-dark-border);
+  --pico-form-element-color: var(--wit-dark-ink);
+  --pico-form-element-active-background-color: #242424;
+  --pico-form-element-selected-background-color: color-mix(
+    in srgb,
+    var(--wit-accent-selected-dark) 58%,
+    var(--wit-dark-bg)
+  );
+
+  --pico-card-background-color: #222222;
+  --pico-card-sectioning-background-color: #2a2a2a;
+  --pico-card-border-color: var(--wit-dark-border);
+
+  --pico-dropdown-background-color: #1f1f1f;
+  --pico-dropdown-border-color: var(--wit-dark-border);
+  --pico-dropdown-hover-background-color: #2e2e2e;
+
+  --pico-box-shadow: none;
+  --pico-modal-overlay-background-color: rgba(0, 0, 0, 0.55);
+
+  --wit-chrome-surface: var(--wit-dark-bg);
+
+  --pico-del-color: #c9665c;
+}
+
+html,
+body {
+  height: 100%;
+  /* Lock the document viewport: scrolling belongs only in sidebar + editor panes. */
+  overflow: hidden;
+}
+
+body {
+  font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+#root {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wit-app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* BlockNote — match app surface + editor face */
+.bn-root {
+  --bn-font-family: var(--wit-font-editor);
+  --bn-colors-editor-text: var(--pico-color);
+  --bn-colors-editor-background: var(--pico-background-color);
+  --bn-colors-menu-text: var(--pico-color);
+  --bn-colors-menu-background: var(--pico-background-color);
+  --bn-colors-tooltip-text: var(--pico-color);
+  --bn-colors-tooltip-background: color-mix(in srgb, var(--pico-background-color) 88%, var(--pico-muted-color));
+  --bn-colors-hovered-text: var(--pico-color);
+  --bn-colors-hovered-background: color-mix(in srgb, var(--pico-background-color) 85%, var(--pico-muted-color));
+  --bn-colors-selected-text: var(--pico-primary-inverse);
+  --bn-colors-selected-background: var(--pico-primary-background);
+  --bn-colors-disabled-text: var(--pico-muted-color);
+  --bn-colors-disabled-background: color-mix(in srgb, var(--pico-background-color) 92%, var(--pico-muted-color));
+  --bn-colors-border: var(--pico-muted-border-color);
+  --bn-colors-side-menu: var(--pico-muted-color);
+  --bn-colors-shadow: transparent;
+  --bn-border-radius: var(--pico-border-radius);
+}
+
+.bn-root[data-color-scheme='light'] {
+  --bn-colors-editor-background: var(--wit-paper);
+  --bn-colors-editor-text: var(--wit-paper-ink);
+}
+
+.bn-root[data-color-scheme='dark'] {
+  --bn-colors-editor-background: var(--wit-dark-bg);
+  /* Light foreground on dark canvas (not paper-ink on a light face). */
+  --bn-colors-editor-text: #f5f5f5;
+  --bn-colors-menu-background: var(--wit-dark-bg);
+  --bn-colors-tooltip-background: #252525;
+  --bn-colors-hovered-background: #2e2e2e;
+  --bn-colors-selected-background: var(--wit-accent-selected-dark);
+  --bn-colors-border: var(--wit-dark-border);
+  --bn-colors-side-menu: var(--wit-dark-muted);
+}
+
+/* Headings inherit the same light ink when the editor runs in dark mode. */
+.bn-root[data-color-scheme='dark'] .bn-default-styles,
+.bn-root[data-color-scheme='dark'] .bn-default-styles p,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h1,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h2,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h3,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h4,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h5,
+.bn-root[data-color-scheme='dark'] .bn-default-styles h6,
+.bn-root[data-color-scheme='dark'] .bn-default-styles li {
+  color: var(--bn-colors-editor-text);
+}
+
+.bn-default-styles,
+.bn-default-styles p,
+.bn-default-styles h1,
+.bn-default-styles h2,
+.bn-default-styles h3,
+.bn-default-styles h4,
+.bn-default-styles h5,
+.bn-default-styles h6,
+.bn-default-styles li {
+  font-family: var(--wit-font-editor);
+}
+
+html[data-font-preset='literary'] .bn-editor {
+  line-height: 1.72;
+}
+
+html[data-font-preset='document'] .bn-editor {
+  line-height: 1.6;
+}
+
+html[data-font-preset='plain'] .bn-editor {
+  line-height: 1.68;
+  letter-spacing: 0.012em;
+}
+
+.bn-editor {
+  padding-inline: clamp(0.75rem, 3vw, 2.5rem);
+}
+
+/* Code stays monospace regardless of prose preset */
+.bn-editor code,
+.bn-editor pre,
+.bn-editor .bn-inline-content code,
+.wit-editor-surface .bn-default-styles code {
+  font-family: var(--wit-font-code);
+}
+
+/* Slightly increase spacing between blocks for readability */
+.bn-editor .bn-block-content {
+  padding: 4px 0;
+}
+
+.bn-editor a[href^='wit:'] {
+  color: var(--pico-primary);
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+/* Page link blocks: H2 scale + document stamp */
+.bn-editor .wit-page-link-host {
+  position: relative;
+  cursor: alias;
+  margin: 0;
+  padding: 0.24em 0.46em 0.22em;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--pico-primary-background) 35%, transparent);
+  outline-offset: -3px;
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  color: var(--pico-h2-color);
+  background: color-mix(in srgb, var(--pico-text-selection-color) 62%, var(--pico-background-color));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--pico-primary-inverse) 22%, transparent) inset,
+    0 1px 2px color-mix(in srgb, currentColor 9%, transparent);
+}
+
+.bn-editor .wit-page-link-host-inner {
+  min-height: 1em;
+  color: inherit;
+}
+
+.bn-editor .wit-page-link-host-inner a[href^='wit:'] {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+.bn-container {
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  box-shadow: none;
+}
+
+.bn-block-content.ProseMirror-selectednode > *,
+.ProseMirror-selectednode > .bn-block-content > * {
+  outline-color: color-mix(in srgb, var(--pico-primary-background) 55%, transparent);
+}
+
+.wit-layout-outer {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.wit-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+.wit-sidebar-float-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--pico-border-radius);
+  background: transparent;
+  color: var(--pico-muted-color);
+  box-shadow: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Narrow in-flow column when the tree panel is closed (chevron + pins). */
+.wit-sidebar-collapse-rail {
+  --wit-sidebar-rail-inner: 2rem;
+
+  position: relative;
+  z-index: 6;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  width: calc(var(--wit-sidebar-rail-inner) + 0.55rem);
+  min-width: calc(var(--wit-sidebar-rail-inner) + 0.55rem);
+  padding: 0.15rem 0.25rem 0.15rem 0;
+  margin-right: 0.35rem;
+  background: var(--wit-chrome-surface);
+}
+
+.wit-sidebar-float-toggle--pin {
+  flex-shrink: 0;
+}
+
+.wit-sidebar-float-toggle:hover {
+  color: var(--pico-color);
+}
+
+.wit-sidebar-float-toggle:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.wit-sidebar-float-toggle:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: 2px;
+}
+
+.wit-layout-resizer {
+  flex: 0 0 6px;
+  width: 6px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-left: 1px solid var(--pico-muted-border-color);
+  border-right: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--pico-muted-border-color) 35%, transparent);
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  align-self: stretch;
+}
+
+.wit-layout-resizer:hover,
+.wit-layout-resizer:focus-visible {
+  background: color-mix(in srgb, var(--pico-primary-background) 28%, transparent);
+}
+
+.wit-layout-resizer:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: -2px;
+}
+
+.wit-sidebar {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-right: none;
+  padding: 0.55rem 0.65rem 0.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  background: var(--wit-chrome-surface);
+  font-family: var(--wit-font-sidebar);
+}
+
+.wit-sidebar-topbar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  margin-bottom: 0.35rem;
+  min-height: 0;
+  min-width: 0;
+}
+
+.wit-sidebar-topbar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  min-width: 0;
+}
+
+.wit-sidebar-float-toggle--in-panel {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.wit-sidebar-status {
+  flex-shrink: 0;
+  margin: 0 0 0.35rem;
+  font-size: 0.88rem;
+}
+
+.wit-sidebar-body {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wit-sidebar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.wit-sidebar-scroll ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.wit-sidebar-scroll--search {
+  flex: 1;
+  min-height: 0;
+}
+
+.wit-pinned-section {
+  flex-shrink: 0;
+  max-height: min(38vh, 240px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin-top: 0.25rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+}
+
+.wit-pinned-heading {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+}
+
+.wit-pinned-empty {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.wit-pinned-section .wit-pinned-empty {
+  color: color-mix(in srgb, var(--pico-muted-color) 72%, transparent);
+}
+
+.wit-pinned-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wit-pinned-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--pico-border-radius);
+}
+
+.wit-pinned-row:hover {
+  background: color-mix(in srgb, var(--pico-text-selection-color) 28%, transparent);
+}
+
+.wit-pin-nav {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.32rem 0.4rem;
+  border: none;
+  border-radius: var(--pico-border-radius) 0 0 var(--pico-border-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wit-pin-nav--current-page .wit-pin-nav-label {
+  color: var(--pico-primary);
+}
+
+.wit-pin-nav-label {
+  display: block;
+  font-size: 0.88rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wit-pin-nav-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+  color: var(--pico-muted-color);
+}
+
+.wit-pin-type-pill {
+  display: inline-block;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  background: color-mix(in srgb, var(--pico-primary-background) 55%, transparent);
+  color: var(--pico-primary);
+}
+
+.wit-pin-unpin {
+  flex-shrink: 0;
+  width: 1.65rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0 var(--pico-border-radius) var(--pico-border-radius) 0;
+  background: transparent;
+  color: var(--pico-muted-color);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.wit-pin-unpin:hover {
+  color: var(--pico-del-color, crimson);
+}
+
+.wit-collapsed-pins {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.wit-collapsed-pins-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 40;
+  min-width: min(280px, calc(100vw - 2rem));
+  max-width: min(320px, calc(100vw - 2rem));
+  max-height: min(52vh, 360px);
+  overflow: auto;
+  padding: 0.45rem 0.5rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--wit-chrome-surface);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--pico-background-color) 15%, transparent);
+}
+
+.wit-collapsed-pins-dropdown-title {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+  margin: 0 0 0.35rem;
+}
+
+.wit-collapsed-pins-empty {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.wit-collapsed-pins-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wit-collapsed-pins-list li {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  border-radius: var(--pico-border-radius);
+}
+
+.wit-collapsed-pins-list li:hover {
+  background: color-mix(in srgb, var(--pico-text-selection-color) 22%, transparent);
+}
+
+.wit-collapsed-pins-item {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.35rem 0.4rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wit-collapsed-pins-item-label {
+  display: block;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wit-collapsed-pins-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.1rem;
+  font-size: 0.7rem;
+  color: var(--pico-muted-color);
+}
+
+.wit-collapsed-pins-unpin {
+  flex-shrink: 0;
+  width: 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--pico-muted-color);
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.wit-collapsed-pins-unpin:hover {
+  color: var(--pico-del-color, crimson);
+}
+
+.wit-pin-preview-dialog {
+  /*
+   * Pico styles `dialog` as a full-viewport flex overlay with a solid modal tint.
+   * That paint sits above `::backdrop` and hid the editor entirely. Keep the shell
+   * transparent so the live page shows through `::backdrop`; card chrome lives on
+   * `.wit-pin-preview-card` (the inner <article>).
+   */
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: var(--pico-color);
+}
+
+.wit-pin-preview-dialog::backdrop {
+  background: rgb(15 23 42 / 0.22);
+  backdrop-filter: blur(14px) saturate(0.96);
+  -webkit-backdrop-filter: blur(14px) saturate(0.96);
+}
+
+html[data-theme='dark'] .wit-pin-preview-dialog::backdrop {
+  background: rgb(0 0 0 / 0.48);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .wit-pin-preview-dialog::backdrop {
+    background: rgb(15 23 42 / 0.42);
+  }
+
+  html[data-theme='dark'] .wit-pin-preview-dialog::backdrop {
+    background: rgb(0 0 0 / 0.62);
+  }
+}
+
+.wit-pin-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(720px, calc(100vw - 2rem));
+  max-width: 100%;
+  max-height: min(85vh, 900px);
+  margin: var(--pico-spacing);
+  padding: 0.85rem 1rem 1rem;
+  box-sizing: border-box;
+  background: var(--pico-background-color);
+  color: var(--pico-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: calc(var(--pico-border-radius) * 1.25);
+  box-shadow: 0 18px 48px color-mix(in srgb, rgb(0 0 0 / 0.22) 55%, transparent);
+}
+
+html[data-theme='dark'] .wit-pin-preview-card {
+  box-shadow: 0 22px 56px rgb(0 0 0 / 0.45);
+}
+
+.wit-pin-preview-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.wit-pin-preview-titles {
+  min-width: 0;
+}
+
+.wit-pin-preview-title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.wit-pin-preview-sub {
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.wit-pin-preview-close {
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.wit-pin-preview-status,
+.wit-pin-preview-error {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.wit-pin-preview-error {
+  color: var(--pico-del-color, crimson);
+}
+
+.wit-pin-preview-editor {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-background-color, var(--pico-background-color));
+  padding: 0.35rem 0.45rem;
+}
+
+.wit-pin-preview-editor .bn-container {
+  min-height: 4rem;
+}
+
+.wit-sidebar-search {
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+}
+
+.wit-sidebar-search-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.wit-sidebar-search-heading {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+}
+
+.wit-sidebar-search-input {
+  margin: 0;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  min-height: 0;
+}
+
+.wit-main {
+  position: relative;
+  flex: 1 1 auto;
+  /* Keep in sync with `MAIN_MIN_WIDTH` in App.tsx — whole main column (rail + body). */
+  min-width: 300px;
+  width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  padding: var(--pico-spacing);
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  font-family: var(--wit-font-editor);
+}
+
+@media (max-width: 768px) {
+  .wit-layout {
+    flex-direction: column;
+  }
+
+  .wit-layout-resizer {
+    display: none;
+  }
+
+  .wit-sidebar {
+    width: 100% !important;
+    flex: 0 1 auto !important;
+    max-height: min(42vh, 360px);
+    border-right: none;
+    border-bottom: 1px solid var(--pico-muted-border-color);
+  }
+
+  .wit-main {
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+}
+
+/* Column for optional collapsed route + editor; keeps a single scroll region inside BlockNote. */
+.wit-main-body {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.wit-main-route-context {
+  flex-shrink: 0;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  font-size: 0.78rem;
+  line-height: 1.3;
+  font-weight: 500;
+  color: var(--pico-muted-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* Make the editor surface the only scrollable region.
+   BlockNote already manages its own internal scrolling; if the outer container
+   also scrolls, some platforms can show a "double scrollbar" while scrolling. */
+
+.wit-editor-surface {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure BlockNote fills the available height so its internal scroller is the
+   only one that shows. */
+.wit-editor-surface .bn-root {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.wit-editor-surface .bn-editor {
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  /* `both-edges` can widen the scroll box and fight the flex layout, hinting a second scrollbar. */
+  scrollbar-gutter: stable;
+  font-size: var(--wit-editor-body-font-size);
+}
+
+.wit-app-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  padding-bottom: 0.25rem;
+  margin-bottom: 0;
+  font-family: var(--wit-font-sidebar);
+  background: var(--pico-background-color);
+}
+
+.wit-app-header-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wit-app-header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.wit-app-header-save {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.wit-app-header-save small {
+  white-space: nowrap;
+}
+
+.wit-app-settings {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.wit-app-settings-summary {
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--pico-border-radius);
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  font-size: 1.25rem;
+  text-align: center;
+  vertical-align: middle;
+  transform: translateY(-0.5px);
+  color: var(--pico-muted-color);
+}
+
+.wit-app-settings-summary:hover {
+  color: var(--pico-color);
+}
+
+.wit-app-settings-summary:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: 2px;
+}
+
+.wit-app-settings-summary::-webkit-details-marker {
+  display: none;
+}
+
+.wit-app-settings-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 80;
+  min-width: 12.5rem;
+  max-width: calc(100vw - 1rem);
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-dropdown-background-color, var(--pico-background-color));
+  box-shadow: none;
+}
+
+.wit-settings-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.wit-settings-row {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+  gap: 0.35rem 0.45rem;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.wit-settings-row-label {
+  color: var(--pico-muted-color);
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.wit-settings-row select {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding-block: 0.2rem;
+  padding-inline: 0.35rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.wit-app > article.contrast {
+  flex-shrink: 0;
+  max-height: min(50vh, 20rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.wit-app-header h1 {
+  margin-bottom: 0;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+}
+
+.wit-app-header p {
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+  color: var(--pico-muted-color);
+  font-size: 0.9rem;
+}
+
+.wit-sidebar-tree-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.wit-sidebar-tree-actions button {
+  margin-bottom: 0;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.wit-sidebar-create-error {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  color: var(--pico-del-color, #c0392b);
+}
+
+.wit-tree-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wit-tree-viewport {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.wit-tree-row {
+  cursor: pointer;
+  user-select: none;
+  padding: 3px 0;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.wit-tree-row[data-selected='true'] {
+  font-weight: 600;
+  color: var(--pico-primary);
+  background: color-mix(in srgb, var(--pico-text-selection-color) 38%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--pico-primary-background) 86%, transparent);
+  padding-left: 0.45rem;
+}
+
+.wit-tree-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.wit-tree-toggle:hover {
+  color: var(--pico-muted-color);
+  background: transparent;
+  box-shadow: none;
+}
+
+.wit-tree-toggle:focus,
+.wit-tree-toggle:focus-visible {
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--pico-muted-color);
+}
+
+.wit-tree-toggle-spacer {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.wit-tree-chevron {
+  display: block;
+  transform: rotate(0deg);
+  transition: transform 0.15s ease;
+}
+
+.wit-tree-toggle[data-open='true'] .wit-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.wit-tree-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wit-tree-rename,
+.wit-tree-add-child,
+.wit-tree-delete {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0 0.35rem;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  line-height: 1;
+  border: none;
+  border-radius: 0.2rem;
+  background: transparent;
+  box-shadow: none;
+  color: var(--pico-muted-color);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.wit-tree-row:hover .wit-tree-rename,
+.wit-tree-row:hover .wit-tree-add-child,
+.wit-tree-row:hover .wit-tree-delete,
+.wit-tree-rename:focus-visible,
+.wit-tree-add-child:focus-visible,
+.wit-tree-delete:focus-visible {
+  opacity: 1;
+}
+
+.wit-tree-rename:hover,
+.wit-tree-add-child:hover {
+  color: var(--pico-primary);
+  background: color-mix(in srgb, var(--pico-primary) 12%, transparent);
+}
+
+.wit-tree-delete:hover {
+  color: var(--pico-del-color, #c0392b);
+  background: color-mix(in srgb, var(--pico-del-color, #c0392b) 14%, transparent);
+}
+
+.wit-tree-rename:focus-visible,
+.wit-tree-add-child:focus-visible {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 1px;
+}
+
+.wit-tree-delete:focus-visible {
+  outline: 2px solid var(--pico-del-color, #c0392b);
+  outline-offset: 1px;
+}
+
+.wit-rename-dialog {
+  margin: auto;
+  padding: 1rem 1.25rem;
+  max-width: 22rem;
+  border: var(--pico-border-width) solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-background-color);
+  box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.12);
+}
+
+.wit-rename-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.wit-rename-dialog header {
+  margin-bottom: 0.75rem;
+}
+
+/* Delete confirmation — scoped tokens so tint tracks light/dark paper */
+.wit-delete-dialog.wit-rename-dialog {
+  --wit-delete-tone: color-mix(in srgb, var(--pico-del-color, #a53830) 88%, var(--pico-color));
+
+  box-sizing: border-box;
+  width: min(26rem, calc(100vw - 1.5rem));
+  max-width: min(26rem, calc(100vw - 1.5rem));
+  padding-inline: clamp(1.05rem, 4vw, 1.55rem);
+  padding-block: clamp(1.35rem, 5vw, 1.9rem);
+  border-radius: calc(var(--pico-border-radius) + 1px);
+  border-color: color-mix(in srgb, var(--wit-delete-tone) 22%, var(--pico-muted-border-color));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--pico-color) 5%, transparent),
+    0 20px 48px rgba(15, 12, 8, 0.14);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wit-delete-dialog.wit-rename-dialog[open] {
+    animation: wit-delete-dialog-in 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+@keyframes wit-delete-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.988);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wit-delete-dialog.wit-rename-dialog[open] {
+    animation: none;
+  }
+}
+
+.wit-delete-dialog .wit-delete-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 clamp(1.05rem, 4vw, 1.35rem);
+  padding-bottom: clamp(0.75rem, 3vw, 1rem);
+  border-bottom: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+
+.wit-delete-dialog .wit-delete-header-icon {
+  flex-shrink: 0;
+  margin-top: 0.06rem;
+  line-height: 0;
+  color: color-mix(in srgb, var(--wit-delete-tone) 72%, var(--pico-muted-color));
+}
+
+.wit-delete-dialog .wit-delete-header strong {
+  font-size: 1.02rem;
+  font-weight: 650;
+  letter-spacing: -0.018em;
+  line-height: 1.35;
+}
+
+.wit-delete-stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1.05rem, 3.8vw, 1.45rem);
+}
+
+.wit-delete-stack > * {
+  margin: 0;
+}
+
+.wit-delete-summary {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.85rem, 3vw, 1.05rem);
+}
+
+.wit-delete-lead {
+  margin: 0;
+  font-size: clamp(0.92rem, 2.6vw, 0.98rem);
+  line-height: 1.58;
+  letter-spacing: -0.012em;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.wit-delete-file-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.68rem 0.78rem;
+  border-radius: calc(var(--pico-border-radius) + 1px);
+  background: color-mix(in srgb, var(--pico-code-background-color) 92%, var(--wit-delete-tone) 8%);
+  border: var(--pico-border-width) solid var(--pico-muted-border-color);
+}
+
+.wit-delete-file-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+}
+
+.wit-delete-id {
+  font-family: var(--wit-font-code);
+  font-size: 0.84rem;
+  display: block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--pico-code-color);
+}
+
+.wit-delete-consequences {
+  padding: clamp(0.65rem, 2vw, 0.75rem) 0 clamp(0.65rem, 2vw, 0.75rem)
+    clamp(0.85rem, 3vw, 1rem);
+  border-left: 3px solid color-mix(in srgb, var(--wit-delete-tone) 58%, var(--pico-muted-border-color));
+  border-radius: 0 var(--pico-border-radius) var(--pico-border-radius) 0;
+  background: color-mix(in srgb, var(--wit-delete-tone) 7%, var(--pico-background-color));
+}
+
+.wit-delete-consequences-label {
+  display: block;
+  margin-bottom: 0.48rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pico-muted-color);
+}
+
+.wit-delete-consequences ul {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: clamp(0.83rem, 2.5vw, 0.88rem);
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--pico-color) 94%, var(--wit-delete-tone) 6%);
+}
+
+.wit-delete-consequences li {
+  margin-bottom: 0.38rem;
+  padding-left: 0.15rem;
+}
+
+.wit-delete-consequences li:last-child {
+  margin-bottom: 0;
+}
+
+.wit-delete-dialog .wit-delete-error {
+  margin: 0;
+  padding: 0.58rem 0.72rem;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  border-radius: var(--pico-border-radius);
+  border: var(--pico-border-width) solid color-mix(in srgb, var(--wit-delete-tone) 38%, transparent);
+  background: color-mix(in srgb, var(--wit-delete-tone) 11%, var(--pico-background-color));
+  color: color-mix(in srgb, var(--wit-delete-tone) 55%, var(--pico-color));
+}
+
+.wit-delete-dialog .wit-delete-actions {
+  margin-top: clamp(1.15rem, 4vw, 1.55rem);
+  padding-top: clamp(1.05rem, 3.5vw, 1.35rem);
+  border-top: var(--pico-border-width) solid var(--pico-muted-border-color);
+  gap: clamp(0.72rem, 2.5vw, 0.95rem);
+}
+
+.wit-delete-dialog .wit-delete-actions button {
+  min-height: 2.75rem;
+  padding-inline: 1rem;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wit-delete-dialog .wit-delete-actions button {
+    transition: none;
+  }
+}
+
+.wit-delete-dialog .wit-delete-cancel:active:not(:disabled),
+.wit-delete-dialog .wit-delete-confirm:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (max-width: 440px) {
+  .wit-delete-dialog .wit-delete-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wit-delete-dialog .wit-delete-actions button {
+    width: 100%;
+    margin-bottom: 0;
+  }
+}
+
+button.wit-delete-confirm {
+  background: var(--pico-del-color, #a53830);
+  border-color: var(--pico-del-color, #a53830);
+  color: var(--pico-inverse, #fff);
+}
+
+button.wit-delete-confirm:hover:not(:disabled) {
+  filter: brightness(1.07);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--wit-delete-tone) 28%, transparent);
+}
+
+button.wit-delete-confirm:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--wit-delete-tone) 65%, transparent);
+  outline-offset: 2px;
+}
+
+button.wit-delete-confirm:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.wit-rename-form label {
+  display: block;
+  margin-bottom: 0.65rem;
+}
+
+.wit-rename-form input {
+  margin-bottom: 0;
+}
+
+.wit-rename-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.wit-rename-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.wit-rename-actions button {
+  margin-bottom: 0;
+}
+
+.wit-editor-toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.wit-muted {
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+}
+
+.wit-placeholder {
+  color: var(--pico-muted-color);
+  font-style: italic;
+  font-size: var(--wit-editor-body-font-size);
+}
+
+/* ── Card block ─────────────────────────────────────────────────────── */
+
+.wit-card-block {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+  padding: 0.75rem 0.65rem;
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-muted-border-color);
+  background: color-mix(in srgb, var(--pico-background-color) 96%, var(--pico-muted-color));
+}
+
+.wit-card-text-col {
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.wit-card-text-content {
+  flex: 1;
+  min-height: 3rem;
+  outline: none;
+}
+
+.wit-card-image-col {
+  position: relative;
+  min-width: 0;
+  border-radius: calc(var(--pico-border-radius) * 0.75);
+  border: 1px solid var(--pico-muted-border-color);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 6rem;
+}
+
+.wit-card-image-col--editing {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border-style: dashed;
+  background: color-mix(in srgb, var(--pico-background-color) 94%, var(--pico-muted-color));
+  min-height: 3rem;
+}
+
+.wit-card-url-icon {
+  flex-shrink: 0;
+  color: var(--pico-muted-color);
+}
+
+.wit-card-url-input {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.82rem;
+  font-family: var(--wit-font-code);
+  border-radius: var(--pico-border-radius);
+  border: 1px solid var(--pico-form-element-border-color);
+  background: var(--pico-form-element-background-color);
+  color: var(--pico-form-element-color);
+  line-height: 1.35;
+}
+
+.wit-card-url-input:focus {
+  outline: 2px solid var(--pico-primary-focus);
+  outline-offset: 0;
+  border-color: var(--pico-primary-background);
+}
+
+.wit-card-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.wit-card-edit-url {
+  position: absolute;
+  bottom: 0.4rem;
+  right: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-background-color);
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.12s ease;
+}
+
+.wit-card-image-col:hover .wit-card-edit-url,
+.wit-card-edit-url:focus-visible {
+  opacity: 1;
+}
+
+.wit-card-edit-url:hover {
+  color: var(--pico-primary);
+  border-color: var(--pico-primary-background);
+}
+
+.wit-card-edit-url:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: 2px;
+}
+
+.wit-card-swap {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-background-color);
+  color: var(--pico-muted-color);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.12s ease;
+  z-index: 2;
+}
+
+.wit-card-block:hover .wit-card-swap,
+.wit-card-swap:focus-visible {
+  opacity: 1;
+}
+
+.wit-card-swap:hover {
+  color: var(--pico-primary);
+  border-color: var(--pico-primary-background);
+}
+
+.wit-card-swap:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: 2px;
+}
+
+.bn-root[data-color-scheme='dark'] .wit-card-block {
+  background: color-mix(in srgb, var(--wit-dark-bg) 92%, var(--wit-dark-muted));
+  border-color: var(--wit-dark-border);
+}
+
+.bn-root[data-color-scheme='dark'] .wit-card-image-col {
+  border-color: var(--wit-dark-border);
+}

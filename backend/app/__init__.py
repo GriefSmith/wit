@@ -1,0 +1,1 @@
+"""wit FastAPI application package."""
