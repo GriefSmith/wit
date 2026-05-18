@@ -55,6 +55,38 @@ export function flatToTree(pages: PageMeta[]): PageTreeNode[] {
   return build(null)
 }
 
+/** Depth-first preorder of page ids (matches sidebar tree order). */
+export function pageTreePreorderIds(pages: PageMeta[]): string[] {
+  const tree = flatToTree(pages)
+  const ids: string[] = []
+  const walk = (nodes: PageTreeNode[]) => {
+    for (const n of nodes) {
+      ids.push(n.id)
+      if (n.children?.length) {
+        walk(n.children)
+      }
+    }
+  }
+  walk(tree)
+  return ids
+}
+
+/** Previous / next sibling in sidebar tree preorder; null when none. */
+export function adjacentPageIdsInTreeOrder(
+  pages: PageMeta[],
+  currentId: string,
+): { prevId: string | null; nextId: string | null } {
+  const order = pageTreePreorderIds(pages)
+  const index = order.indexOf(currentId)
+  if (index < 0) {
+    return { prevId: null, nextId: null }
+  }
+  return {
+    prevId: index > 0 ? order[index - 1]! : null,
+    nextId: index < order.length - 1 ? order[index + 1]! : null,
+  }
+}
+
 /** Walk from ``pageId`` toward roots via ``parent``; returns titles root → leaf. */
 export function pageTitleTrail(pages: PageMeta[], pageId: string | null): string[] {
   if (!pageId) {

@@ -1,6 +1,14 @@
 import { BlockNoteView } from '@blocknote/mantine'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { PointerEvent } from 'react'
 
 import { fetchPage, putPageContent } from '../api'
@@ -9,6 +17,7 @@ import { isWitPageHref, witHrefToPageId } from '../lib/internalLinks'
 import { witBlockNoteSchema } from '../lib/witBlockNoteSchema'
 import type { PageMeta } from '../types'
 
+import { PageNavButtons } from './PageNavButtons'
 import { witEditorSideMenu } from './WitEditorSideMenu'
 
 export type PageEditorHandle = {
@@ -44,6 +53,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [witLinkNotice, setWitLinkNotice] = useState<string | null>(null)
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
 
   const pageIdSet = useMemo(() => new Set(pages.map((p) => p.id)), [pages])
 
@@ -176,6 +187,27 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     })
   }, [onHeaderStateChange, loading, saving, dirty, loadError, saveError, witLinkNotice])
 
+  const bindScrollRoot = useCallback(() => {
+    const el = surfaceRef.current?.querySelector<HTMLElement>('.bn-editor')
+    setScrollRoot(el ?? null)
+  }, [])
+
+  useEffect(() => {
+    bindScrollRoot()
+    const surface = surfaceRef.current
+    if (!surface) {
+      return
+    }
+    const mo = new MutationObserver(bindScrollRoot)
+    mo.observe(surface, { childList: true, subtree: true })
+    return () => mo.disconnect()
+  }, [bindScrollRoot, pageId, loading])
+
+  useEffect(() => {
+    const el = surfaceRef.current?.querySelector<HTMLElement>('.bn-editor')
+    el?.scrollTo({ top: 0 })
+  }, [pageId])
+
   if (!pageId) {
     return <p className="wit-placeholder">Select a page from the tree.</p>
   }
@@ -189,7 +221,17 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
   }
 
   return (
-    <div className="wit-editor-surface" onPointerDownCapture={handleEditorPointerDown}>
+    <div
+      ref={surfaceRef}
+      className="wit-editor-surface"
+      onPointerDownCapture={handleEditorPointerDown}
+    >
+      <PageNavButtons
+        pageId={pageId}
+        pages={pages}
+        scrollRoot={scrollRoot}
+        onNavigate={onNavigateToPage}
+      />
       <BlockNoteView
         editor={editor}
         theme={colorScheme}
