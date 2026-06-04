@@ -55,14 +55,20 @@ Open `http://localhost:5173` in your browser. The Vite dev server proxies `/page
 
 ## Configuration
 
-All configuration is via environment variables — no config files to edit.
+Settings are environment variables. For local development, copy [`.env.example`](.env.example) to `.env` at the repo root and edit there — `make dev` and the backend both load it automatically (`.env` is gitignored).
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WIT_PAGES_ROOT` | `data/pages/` (relative to repo root) | Absolute path to the directory where your `.md` files live. Set this to point at any directory on your machine. |
+| `WIT_PAGES_ROOT` | `data/pages/` (relative to repo root) | Directory where your page `*.md` files live (not a single file path). |
 | `WIT_CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated list of allowed CORS origins. Override when running the frontend on a non-default port. |
 
-Example — store your pages in `~/Documents/notes`:
+Example `.env`:
+
+```bash
+WIT_PAGES_ROOT=/Users/you/Documents/notes
+```
+
+You can also pass variables inline (they override `.env`):
 
 ```bash
 WIT_PAGES_ROOT=~/Documents/notes uvicorn app.main:app --reload --app-dir backend

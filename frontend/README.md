@@ -47,4 +47,4 @@ src/
 
 ## Vite proxy
 
-`vite.config.ts` forwards `/pages`, `/health`, and `/config` to `http://127.0.0.1:8000` in dev mode. No env files or CORS configuration needed for local development.
+`vite.config.ts` forwards `/pages`, `/health`, and `/config` to `http://127.0.0.1:8000` in dev mode. Page paths are configured via repo-root `.env` on the backend (see the root README); no frontend env file is required for local development.
