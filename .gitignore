@@ -20,6 +20,9 @@ frontend/dist/
 .idea/
 .vscode/
 
+# Local config (copy from .env.example)
+.env
+
 # ── Data ──────────────────────────────────────────────────────────────────────
 # Ship only sample-*.md at the root of data/pages/. Everything else there
 # (manuscripts, images, exports, editor state under .wit/, nested folders) stays
