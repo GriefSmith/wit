@@ -1,6 +1,13 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Repo-root `.env` (optional, gitignored). Does not override existing env vars.
+_wit_root = Path(__file__).resolve().parent.parent.parent
+load_dotenv(_wit_root / ".env")
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
