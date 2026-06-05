@@ -5,6 +5,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 
@@ -18,16 +19,20 @@ import { useWitPins } from "./context/WitPinsContext";
 import { usePages } from "./hooks/usePages";
 import {
   ACCENT_STORAGE_KEY,
-  COLOR_SCHEME_STORAGE_KEY,
+  BG_THEME_STORAGE_KEY,
   FONT_PRESET_STORAGE_KEY,
   TEXT_SIZE_STORAGE_KEY,
+  getSystemColorScheme,
   readStoredAccent,
-  readStoredColorScheme,
+  readStoredBgTheme,
   readStoredFontPreset,
   readStoredTextSize,
+  resolveEffectiveColorScheme,
+  subscribeSystemColorScheme,
 } from "./lib/witAppearance";
 import type {
   AccentName,
+  BgThemeName,
   FontPresetName,
   TextSizeName,
 } from "./lib/witAppearance";
@@ -127,9 +132,13 @@ export default function App() {
   const [textSize, setTextSize] = useState<TextSizeName>(() =>
     readStoredTextSize(),
   );
-  const [colorScheme, setColorScheme] = useState<"light" | "dark">(() =>
-    readStoredColorScheme(),
+  const [bgTheme, setBgTheme] = useState<BgThemeName>(() => readStoredBgTheme());
+  const systemColorScheme = useSyncExternalStore(
+    subscribeSystemColorScheme,
+    getSystemColorScheme,
+    () => "light" as const,
   );
+  const colorScheme = resolveEffectiveColorScheme(bgTheme, systemColorScheme);
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
   const [sidebarWidthPx, setSidebarWidthPx] = useState(readSidebarWidth);
   const deferredQuery = useDeferredValue(query);
@@ -247,10 +256,18 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", colorScheme);
   }, [colorScheme]);
 
-  const handleColorSchemeChange = useCallback((scheme: "light" | "dark") => {
-    setColorScheme(scheme);
-    window.localStorage.setItem(COLOR_SCHEME_STORAGE_KEY, scheme);
-  }, []);
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const root = document.documentElement;
+    if (bgTheme === "default") {
+      root.removeAttribute("data-bg-theme");
+    } else {
+      root.setAttribute("data-bg-theme", bgTheme);
+    }
+    window.localStorage.setItem(BG_THEME_STORAGE_KEY, bgTheme);
+  }, [bgTheme]);
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_OPEN_KEY, sidebarOpen ? "1" : "0");
@@ -371,8 +388,8 @@ export default function App() {
             onFontPresetChange={setFontPreset}
             textSize={textSize}
             onTextSizeChange={setTextSize}
-            colorScheme={colorScheme}
-            onColorSchemeChange={handleColorSchemeChange}
+            bgTheme={bgTheme}
+            onBgThemeChange={setBgTheme}
           />
         </div>
       </header>

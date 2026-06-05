@@ -24,6 +24,18 @@
   --wit-dark-border: #3a3a3a;
   --wit-dark-input: #141414;
   --wit-dark-code-bg: #252525;
+  --wit-dark-surface-card: #222222;
+  --wit-dark-surface-section: #2a2a2a;
+  --wit-dark-surface-dropdown: #1f1f1f;
+  --wit-dark-surface-active: #242424;
+  --wit-dark-surface-hover: #2e2e2e;
+  --wit-dark-heading-1: #ece9e4;
+  --wit-dark-heading-2: #e3dfd8;
+  --wit-dark-heading-4: #cec9c2;
+  --wit-dark-heading-5: #b8b3ac;
+  --wit-dark-code-ink: #b5b0a8;
+  --wit-dark-mark-bg: rgba(80, 120, 90, 0.35);
+  --wit-dark-mark-ink: #eef1ee;
 
   /* Accent defaults (light + dark) */
   --wit-accent-ink-light: #3d5a4a;
@@ -139,7 +151,7 @@ html[data-text-size='granny'] {
 }
 
 /* Optional accent presets for both themes:
-   add `data-accent="pine" | "mint" | "cyan" | "violet" | "amber"` on <html>. */
+   add `data-accent="pine" | "mint" | "cyan" | "violet" | "scarlet" | "amber"` on <html>. */
 [data-accent='pine'] {
   --wit-accent-ink-light: #2f6f4e;
   --wit-accent-bg-light: #2f6f4e;
@@ -212,6 +224,24 @@ html[data-text-size='granny'] {
   --wit-accent-selected-dark: #3f3270;
 }
 
+[data-accent='scarlet'] {
+  --wit-accent-ink-light: #943648;
+  --wit-accent-bg-light: #943648;
+  --wit-accent-bg-hover-light: #7c2d3c;
+  --wit-accent-focus-light: rgba(148, 54, 72, 0.34);
+  --wit-accent-inverse-light: #fff8f9;
+  --wit-accent-tint-light: rgba(190, 80, 95, 0.24);
+  --wit-accent-selected-light: rgba(148, 54, 72, 0.16);
+
+  --wit-accent-ink-dark: #f0a0a8;
+  --wit-accent-bg-dark: #8b2838;
+  --wit-accent-bg-hover-dark: #a03344;
+  --wit-accent-focus-dark: rgba(240, 160, 168, 0.44);
+  --wit-accent-inverse-dark: #180608;
+  --wit-accent-tint-dark: rgba(190, 80, 95, 0.34);
+  --wit-accent-selected-dark: #702030;
+}
+
 [data-accent='amber'] {
   --wit-accent-ink-light: #88561d;
   --wit-accent-bg-light: #88561d;
@@ -228,6 +258,133 @@ html[data-text-size='granny'] {
   --wit-accent-inverse-dark: #180f05;
   --wit-accent-tint-dark: rgba(185, 130, 55, 0.31);
   --wit-accent-selected-dark: #643f16;
+}
+
+/* Named background palettes — dark scheme only (Monokai / Kimbie Dark). */
+html[data-bg-theme='forest'] {
+  --wit-dark-bg: #1f2620;
+  --wit-dark-ink: #cdd8ca;
+  --wit-dark-muted: #7d9178;
+  --wit-dark-border: #3a4a38;
+  --wit-dark-input: #141a14;
+  --wit-dark-code-bg: #2a3428;
+  --wit-dark-surface-card: #262f24;
+  --wit-dark-surface-section: #323d30;
+  --wit-dark-surface-dropdown: #262f24;
+  --wit-dark-surface-active: #3f5040;
+  --wit-dark-surface-hover: #4b5f4c;
+  --wit-dark-heading-1: #d4e0d2;
+  --wit-dark-heading-2: #9ec888;
+  --wit-dark-heading-4: #aab8a4;
+  --wit-dark-heading-5: #7d9178;
+  --wit-dark-code-ink: #94c47a;
+  --wit-dark-mark-bg: rgba(148, 196, 122, 0.28);
+  --wit-dark-mark-ink: #e8f0e6;
+}
+
+html[data-bg-theme='steppe'] {
+  --wit-dark-bg: #2c281c;
+  --wit-dark-ink: #ddd4b8;
+  --wit-dark-muted: #a89870;
+  --wit-dark-border: #5a5038;
+  --wit-dark-input: #1e1a12;
+  --wit-dark-code-bg: #383220;
+  --wit-dark-surface-card: #343018;
+  --wit-dark-surface-section: #403c28;
+  --wit-dark-surface-dropdown: #343018;
+  --wit-dark-surface-active: #504830;
+  --wit-dark-surface-hover: #605840;
+  --wit-dark-heading-1: #e4dcc4;
+  --wit-dark-heading-2: #e0c878;
+  --wit-dark-heading-4: #c4b898;
+  --wit-dark-heading-5: #a89870;
+  --wit-dark-code-ink: #d4b858;
+  --wit-dark-mark-bg: rgba(224, 200, 120, 0.28);
+  --wit-dark-mark-ink: #eee8d8;
+}
+
+html[data-bg-theme='mountain'] {
+  --wit-dark-bg: #272822;
+  --wit-dark-ink: #f8f8f2;
+  --wit-dark-muted: #75715e;
+  --wit-dark-border: #49483e;
+  --wit-dark-input: #1e1f1a;
+  --wit-dark-code-bg: #3e3d32;
+  --wit-dark-surface-card: #2f3129;
+  --wit-dark-surface-section: #3e3d32;
+  --wit-dark-surface-dropdown: #2f3129;
+  --wit-dark-surface-active: #3e3d32;
+  --wit-dark-surface-hover: #49483e;
+  --wit-dark-heading-1: #f8f8f2;
+  --wit-dark-heading-2: #e6db74;
+  --wit-dark-heading-4: #cac9c2;
+  --wit-dark-heading-5: #a59f8f;
+  --wit-dark-code-ink: #a6e22e;
+  --wit-dark-mark-bg: rgba(230, 219, 116, 0.28);
+  --wit-dark-mark-ink: #f8f8f2;
+}
+
+html[data-bg-theme='dune'] {
+  --wit-dark-bg: #322e18;
+  --wit-dark-ink: #e8dcb8;
+  --wit-dark-muted: #b8a868;
+  --wit-dark-border: #686040;
+  --wit-dark-input: #222010;
+  --wit-dark-code-bg: #443c20;
+  --wit-dark-surface-card: #3c3818;
+  --wit-dark-surface-section: #484428;
+  --wit-dark-surface-dropdown: #3c3818;
+  --wit-dark-surface-active: #585030;
+  --wit-dark-surface-hover: #686040;
+  --wit-dark-heading-1: #f0e8c8;
+  --wit-dark-heading-2: #f0d868;
+  --wit-dark-heading-4: #d4c898;
+  --wit-dark-heading-5: #b8a868;
+  --wit-dark-code-ink: #e8c840;
+  --wit-dark-mark-bg: rgba(240, 216, 104, 0.28);
+  --wit-dark-mark-ink: #f8f4e0;
+}
+
+html[data-bg-theme='wasteland'] {
+  --wit-dark-bg: #2e2418;
+  --wit-dark-ink: #d3af86;
+  --wit-dark-muted: #b08858;
+  --wit-dark-border: #6e5340;
+  --wit-dark-input: #1c1810;
+  --wit-dark-code-bg: #42301a;
+  --wit-dark-surface-card: #42301a;
+  --wit-dark-surface-section: #504030;
+  --wit-dark-surface-dropdown: #5f4d38;
+  --wit-dark-surface-active: #6e5340;
+  --wit-dark-surface-hover: #8f6028;
+  --wit-dark-heading-1: #d3af86;
+  --wit-dark-heading-2: #e3b583;
+  --wit-dark-heading-4: #c2a383;
+  --wit-dark-heading-5: #b08858;
+  --wit-dark-code-ink: #889b4a;
+  --wit-dark-mark-bg: rgba(132, 97, 61, 0.38);
+  --wit-dark-mark-ink: #d3af86;
+}
+
+html[data-bg-theme='ocean'] {
+  --wit-dark-bg: #1b2629;
+  --wit-dark-ink: #c6d6d2;
+  --wit-dark-muted: #788f8a;
+  --wit-dark-border: #374945;
+  --wit-dark-input: #131b1e;
+  --wit-dark-code-bg: #243035;
+  --wit-dark-surface-card: #223236;
+  --wit-dark-surface-section: #2d3c42;
+  --wit-dark-surface-dropdown: #223236;
+  --wit-dark-surface-active: #384c52;
+  --wit-dark-surface-hover: #435960;
+  --wit-dark-heading-1: #cbd9d5;
+  --wit-dark-heading-2: #7eb8c8;
+  --wit-dark-heading-4: #a0b4b0;
+  --wit-dark-heading-5: #788f8a;
+  --wit-dark-code-ink: #6ec4b4;
+  --wit-dark-mark-bg: rgba(110, 196, 180, 0.28);
+  --wit-dark-mark-ink: #e2ebe8;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -257,35 +414,35 @@ html[data-text-size='granny'] {
     --pico-contrast-hover-background: #ffffff;
     --pico-contrast-inverse: #0d0d0d;
 
-    --pico-h1-color: #ece9e4;
-    --pico-h2-color: #e3dfd8;
+    --pico-h1-color: var(--wit-dark-heading-1);
+    --pico-h2-color: var(--wit-dark-heading-2);
     --pico-h3-color: var(--wit-dark-ink);
-    --pico-h4-color: #cec9c2;
-    --pico-h5-color: #b8b3ac;
+    --pico-h4-color: var(--wit-dark-heading-4);
+    --pico-h5-color: var(--wit-dark-heading-5);
     --pico-h6-color: var(--wit-dark-muted);
 
-    --pico-mark-background-color: rgba(80, 120, 90, 0.35);
-    --pico-mark-color: #eef1ee;
+    --pico-mark-background-color: var(--wit-dark-mark-bg);
+    --pico-mark-color: var(--wit-dark-mark-ink);
     --pico-code-background-color: var(--wit-dark-code-bg);
-    --pico-code-color: #b5b0a8;
+    --pico-code-color: var(--wit-dark-code-ink);
 
     --pico-form-element-background-color: var(--wit-dark-input);
     --pico-form-element-border-color: var(--wit-dark-border);
     --pico-form-element-color: var(--wit-dark-ink);
-    --pico-form-element-active-background-color: #242424;
+    --pico-form-element-active-background-color: var(--wit-dark-surface-active);
     --pico-form-element-selected-background-color: color-mix(
       in srgb,
       var(--wit-accent-selected-dark) 58%,
       var(--wit-dark-bg)
     );
 
-    --pico-card-background-color: #222222;
-    --pico-card-sectioning-background-color: #2a2a2a;
+    --pico-card-background-color: var(--wit-dark-surface-card);
+    --pico-card-sectioning-background-color: var(--wit-dark-surface-section);
     --pico-card-border-color: var(--wit-dark-border);
 
-    --pico-dropdown-background-color: #1f1f1f;
+    --pico-dropdown-background-color: var(--wit-dark-surface-dropdown);
     --pico-dropdown-border-color: var(--wit-dark-border);
-    --pico-dropdown-hover-background-color: #2e2e2e;
+    --pico-dropdown-hover-background-color: var(--wit-dark-surface-hover);
 
     --pico-box-shadow: none;
     --pico-modal-overlay-background-color: rgba(0, 0, 0, 0.55);
@@ -321,35 +478,35 @@ html[data-text-size='granny'] {
   --pico-contrast-hover-background: #ffffff;
   --pico-contrast-inverse: #0d0d0d;
 
-  --pico-h1-color: #ece9e4;
-  --pico-h2-color: #e3dfd8;
+  --pico-h1-color: var(--wit-dark-heading-1);
+  --pico-h2-color: var(--wit-dark-heading-2);
   --pico-h3-color: var(--wit-dark-ink);
-  --pico-h4-color: #cec9c2;
-  --pico-h5-color: #b8b3ac;
+  --pico-h4-color: var(--wit-dark-heading-4);
+  --pico-h5-color: var(--wit-dark-heading-5);
   --pico-h6-color: var(--wit-dark-muted);
 
-  --pico-mark-background-color: rgba(80, 120, 90, 0.35);
-  --pico-mark-color: #eef1ee;
+  --pico-mark-background-color: var(--wit-dark-mark-bg);
+  --pico-mark-color: var(--wit-dark-mark-ink);
   --pico-code-background-color: var(--wit-dark-code-bg);
-  --pico-code-color: #b5b0a8;
+  --pico-code-color: var(--wit-dark-code-ink);
 
   --pico-form-element-background-color: var(--wit-dark-input);
   --pico-form-element-border-color: var(--wit-dark-border);
   --pico-form-element-color: var(--wit-dark-ink);
-  --pico-form-element-active-background-color: #242424;
+  --pico-form-element-active-background-color: var(--wit-dark-surface-active);
   --pico-form-element-selected-background-color: color-mix(
     in srgb,
     var(--wit-accent-selected-dark) 58%,
     var(--wit-dark-bg)
   );
 
-  --pico-card-background-color: #222222;
-  --pico-card-sectioning-background-color: #2a2a2a;
+  --pico-card-background-color: var(--wit-dark-surface-card);
+  --pico-card-sectioning-background-color: var(--wit-dark-surface-section);
   --pico-card-border-color: var(--wit-dark-border);
 
-  --pico-dropdown-background-color: #1f1f1f;
+  --pico-dropdown-background-color: var(--wit-dark-surface-dropdown);
   --pico-dropdown-border-color: var(--wit-dark-border);
-  --pico-dropdown-hover-background-color: #2e2e2e;
+  --pico-dropdown-hover-background-color: var(--wit-dark-surface-hover);
 
   --pico-box-shadow: none;
   --pico-modal-overlay-background-color: rgba(0, 0, 0, 0.55);
@@ -414,11 +571,10 @@ body {
 
 .bn-root[data-color-scheme='dark'] {
   --bn-colors-editor-background: var(--wit-dark-bg);
-  /* Light foreground on dark canvas (not paper-ink on a light face). */
-  --bn-colors-editor-text: #f5f5f5;
+  --bn-colors-editor-text: var(--wit-dark-ink);
   --bn-colors-menu-background: var(--wit-dark-bg);
-  --bn-colors-tooltip-background: #252525;
-  --bn-colors-hovered-background: #2e2e2e;
+  --bn-colors-tooltip-background: var(--wit-dark-code-bg);
+  --bn-colors-hovered-background: var(--wit-dark-surface-hover);
   --bn-colors-selected-background: var(--wit-accent-selected-dark);
   --bn-colors-border: var(--wit-dark-border);
   --bn-colors-side-menu: var(--wit-dark-muted);
@@ -1308,7 +1464,7 @@ html[data-theme='dark'] .wit-pin-preview-card {
   top: calc(100% + 0.35rem);
   right: 0;
   z-index: 80;
-  min-width: 12.5rem;
+  min-width: 14rem;
   max-width: calc(100vw - 1rem);
   padding: 0.5rem 0.55rem;
   border: 1px solid var(--pico-muted-border-color);
@@ -1326,8 +1482,8 @@ html[data-theme='dark'] .wit-pin-preview-card {
 .wit-settings-row {
   margin: 0;
   display: grid;
-  grid-template-columns: 3.75rem minmax(0, 1fr);
-  gap: 0.35rem 0.45rem;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.35rem 0.55rem;
   align-items: center;
   font-size: 0.8125rem;
 }
@@ -1336,6 +1492,7 @@ html[data-theme='dark'] .wit-pin-preview-card {
   color: var(--pico-muted-color);
   font-size: 0.78rem;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .wit-settings-row select {

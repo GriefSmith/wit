@@ -2,9 +2,12 @@ import { useEffect, useRef } from "react";
 
 import {
   type AccentName,
+  BG_THEME_MENU_OPTIONS,
+  type BgThemeName,
   type FontPresetName,
   type TextSizeName,
   isAccentName,
+  isBgThemeName,
   isFontPresetName,
   isTextSizeName,
 } from "../lib/witAppearance";
@@ -15,6 +18,7 @@ const ACCENT_OPTIONS: { value: AccentName; label: string }[] = [
   { value: "mint", label: "Mint" },
   { value: "cyan", label: "Cyan" },
   { value: "violet", label: "Violet" },
+  { value: "scarlet", label: "Scarlet" },
   { value: "amber", label: "Amber" },
 ];
 
@@ -38,8 +42,8 @@ type Props = {
   onFontPresetChange: (next: FontPresetName) => void;
   textSize: TextSizeName;
   onTextSizeChange: (next: TextSizeName) => void;
-  colorScheme: "light" | "dark";
-  onColorSchemeChange: (next: "light" | "dark") => void;
+  bgTheme: BgThemeName;
+  onBgThemeChange: (next: BgThemeName) => void;
 };
 
 export function WitSettingsMenu({
@@ -49,8 +53,8 @@ export function WitSettingsMenu({
   onFontPresetChange,
   textSize,
   onTextSizeChange,
-  colorScheme,
-  onColorSchemeChange,
+  bgTheme,
+  onBgThemeChange,
 }: Props) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -134,19 +138,22 @@ export function WitSettingsMenu({
             </select>
           </label>
           <label className="wit-settings-row">
-            <span className="wit-settings-row-label">Theme</span>
+            <span className="wit-settings-row-label">Background</span>
             <select
-              value={colorScheme}
+              value={bgTheme}
               onChange={(e) => {
                 const v = e.target.value;
-                if (v === "light" || v === "dark") {
-                  onColorSchemeChange(v);
+                if (isBgThemeName(v)) {
+                  onBgThemeChange(v);
                 }
               }}
-              aria-label="Light or dark theme"
+              aria-label="Background palette (System follows OS light/dark)"
             >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
+              {BG_THEME_MENU_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
