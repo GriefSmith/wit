@@ -4,9 +4,20 @@ React + TypeScript + Vite single-page application. Proxies all API calls to the 
 
 ## Dev
 
+From the **repo root** (recommended):
+
+```bash
+make install-frontend   # once
+make frontend           # http://localhost:5173 — proxies /pages, /health, /config to :8000
+```
+
+Or start backend and frontend together: `make dev`.
+
+From this directory:
+
 ```bash
 npm install
-npm run dev       # http://localhost:5173 — proxies /pages, /health, /config to :8000
+npm run dev
 ```
 
 ## Build
