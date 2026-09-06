@@ -90,9 +90,19 @@ export function WitSettingsMenu({
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
+    const el = detailsRef.current;
+    if (!el) {
+      return;
+    }
+
+    const syncOpenClass = () => {
+      document.documentElement.classList.toggle("wit-settings-open", el.open);
+    };
+    syncOpenClass();
+    el.addEventListener("toggle", syncOpenClass);
+
     const onDocumentClick = (e: MouseEvent) => {
-      const el = detailsRef.current;
-      if (!el?.open) {
+      if (!el.open) {
         return;
       }
       const t = e.target;
@@ -101,7 +111,12 @@ export function WitSettingsMenu({
       }
     };
     document.addEventListener("click", onDocumentClick);
-    return () => document.removeEventListener("click", onDocumentClick);
+
+    return () => {
+      el.removeEventListener("toggle", syncOpenClass);
+      document.removeEventListener("click", onDocumentClick);
+      document.documentElement.classList.remove("wit-settings-open");
+    };
   }, []);
 
   return (

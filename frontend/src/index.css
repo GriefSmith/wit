@@ -1407,6 +1407,13 @@ html[data-theme='dark'] .wit-pin-preview-card {
   top: 0.55rem;
 }
 
+/* Settings dropdown sits over the same top-right corner; hide the chip so it
+   cannot peek past the panel's right edge while the menu is open. */
+html.wit-settings-open .wit-page-nav-btn--prev {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .wit-page-nav-btn--next {
   bottom: 0.55rem;
 }
@@ -1545,6 +1552,7 @@ html[data-theme='dark'] .wit-pin-preview-card {
   top: calc(100% + 0.35rem);
   right: 0;
   z-index: 80;
+  isolation: isolate;
   min-width: 14rem;
   max-width: calc(100vw - 1rem);
   padding: 0.5rem 0.55rem;
