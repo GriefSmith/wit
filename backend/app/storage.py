@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import re
 import tempfile
@@ -153,6 +155,45 @@ def delete_editor_overlay(page_id: str, root: Path | None = None) -> None:
         pass
 
 
+def markdown_body_hash(body: str) -> str:
+    """SHA-256 hex digest of the markdown body as stored on disk."""
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def stamp_overlay_with_markdown_hash(overlay: str, markdown_body: str) -> str:
+    """Bind an overlay to the markdown body it was saved with.
+
+    Overlays that are not a JSON object with a ``document`` array are returned
+    unchanged so PUT stays backward-compatible with opaque payloads.
+    """
+    parsed = json.loads(overlay)
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("document"), list):
+        return overlay
+    parsed["version"] = 3
+    parsed["markdown_sha256"] = markdown_body_hash(markdown_body)
+    return json.dumps(parsed, ensure_ascii=False)
+
+
+def overlay_is_stale(overlay: str | None, markdown_body: str) -> bool:
+    """True when a hashed sidecar no longer matches the current markdown body.
+
+    Overlays without ``markdown_sha256`` (v2 and older) are not treated as stale
+    so existing block identities survive until the next editor save.
+    """
+    if overlay is None or not overlay.strip():
+        return False
+    try:
+        parsed = json.loads(overlay)
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(parsed, dict):
+        return False
+    stored = parsed.get("markdown_sha256")
+    if not isinstance(stored, str) or not stored:
+        return False
+    return stored != markdown_body_hash(markdown_body)
+
+
 def apply_editor_overlay_put(
     page_id: str, overlay: str | None, root: Path | None = None
 ) -> bool:
@@ -162,24 +203,33 @@ def apply_editor_overlay_put(
     if overlay == "":
         delete_editor_overlay(page_id, root)
         return resolve_path_for_id(page_id, root) is not None
-    if resolve_path_for_id(page_id, root) is None:
+    split = read_page_split(page_id, root)
+    if split is None:
         return False
+    _, body = split
+    try:
+        to_write = stamp_overlay_with_markdown_hash(overlay, body)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        to_write = overlay
     path = _overlay_path(page_id, root)
     path.parent.mkdir(parents=True, exist_ok=True)
-    _atomic_write(path, overlay)
+    _atomic_write(path, to_write)
     return True
 
 
 def read_page_detail(
     page_id: str, root: Path | None = None
-) -> tuple[dict, str, str | None] | None:
+) -> tuple[dict, str, str | None, bool] | None:
     split = read_page_split(page_id, root)
     if split is None:
         return None
     fm, body = split
     path = _overlay_path(page_id, root)
     overlay = path.read_text(encoding="utf-8") if path.is_file() else None
-    return fm, body, overlay
+    stale = overlay_is_stale(overlay, body)
+    if stale:
+        overlay = None
+    return fm, body, overlay, stale
 
 
 def write_page_body(page_id: str, markdown_body: str, root: Path | None = None) -> bool:

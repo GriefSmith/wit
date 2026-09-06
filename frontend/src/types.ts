@@ -23,8 +23,10 @@ export type PageDetail = {
   id: string
   frontmatter: Record<string, unknown>
   markdown_body: string
-  /** BlockNote internal HTML; stored under `.wit/editor/{id}.html`, not inside the .md body. */
+  /** BlockNote document JSON; stored under `.wit/editor/{id}.json`. */
   editor_overlay?: string | null
+  /** True when the sidecar hash no longer matches the `.md` body. */
+  overlay_stale?: boolean
 }
 
 export type PageTreeNode = {

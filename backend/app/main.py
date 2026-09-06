@@ -24,12 +24,14 @@ from app.models import (
 from app.storage import (
     apply_editor_overlay_put,
     create_page,
+    delete_editor_overlay,
     delete_page,
     get_pages_root,
     is_valid_page_id,
     patch_page_meta,
     read_page_detail,
     rename_page_id,
+    resolve_path_for_id,
     scan_pages,
     write_page_body,
 )
@@ -93,12 +95,13 @@ def get_page(page_id: str) -> PageDetailResponse:
     data = read_page_detail(page_id)
     if data is None:
         raise HTTPException(status_code=404, detail="page not found")
-    fm, md_body, overlay = data
+    fm, md_body, overlay, overlay_stale = data
     return PageDetailResponse(
         id=page_id,
         frontmatter=fm,
         markdown_body=md_body,
         editor_overlay=overlay,
+        overlay_stale=overlay_stale,
     )
 
 
@@ -111,6 +114,14 @@ def put_page(page_id: str, body: PutPageBody) -> dict[str, str]:
     if not apply_editor_overlay_put(page_id, body.editor_overlay):
         raise HTTPException(status_code=404, detail="page not found")
     return {"status": "saved"}
+
+
+@app.delete("/pages/{page_id}/overlay", status_code=204)
+def remove_overlay(page_id: str) -> None:
+    _require_valid_id(page_id)
+    if resolve_path_for_id(page_id) is None:
+        raise HTTPException(status_code=404, detail="page not found")
+    delete_editor_overlay(page_id)
 
 
 @app.delete("/pages/{page_id}", status_code=204)

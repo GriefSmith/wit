@@ -129,6 +129,8 @@ data/pages/.wit/editor/{page-id}.json
 
 These files are auto-generated and can always be deleted safely — the editor will re-parse from the `.md` source on next open. They are intentionally excluded from git (see `.gitignore`).
 
+Each sidecar is bound to the markdown body it was saved with (SHA-256). If you edit the `.md` file directly, the next load ignores the sidecar, rebuilds the editor from markdown, and shows a notice. Use **Reload from markdown** in the app to drop a sidecar on demand. Sidecars from older saves (no hash) are kept until the next Save, which writes a hashed sidecar.
+
 ### Recommended page size
 
 The JSON sidecar is roughly **3× the size of the raw markdown** for plain prose, and up to **8× for heavily formatted content** (nested lists, many inline styles, tables). Keeping pages within these soft limits avoids editor slowdown and large API payloads:
@@ -151,9 +153,10 @@ The backend serves a small REST API. All paths are relative to `http://127.0.0.1
 | -------- | ------------------ | ------------------------------------------------------------------ |
 | `GET`    | `/pages`           | List all pages with metadata and tags index                        |
 | `POST`   | `/pages`           | Create a new page                                                  |
-| `GET`    | `/pages/{id}`      | Fetch page content (front-matter + markdown body + editor overlay) |
-| `PUT`    | `/pages/{id}`      | Overwrite page content and/or editor overlay                       |
-| `DELETE` | `/pages/{id}`      | Delete a leaf page (fails if it has children)                      |
+| `GET`    | `/pages/{id}`          | Fetch page content (front-matter + markdown body + editor overlay) |
+| `PUT`    | `/pages/{id}`          | Overwrite page content and/or editor overlay                       |
+| `DELETE` | `/pages/{id}/overlay`  | Delete the editor sidecar so the next load reparses markdown       |
+| `DELETE` | `/pages/{id}`          | Delete a leaf page (fails if it has children)                      |
 | `PATCH`  | `/pages/{id}/meta` | Update title, parent, order, or rename the slug                    |
 | `GET`    | `/health`          | Liveness check                                                     |
 | `GET`    | `/config`          | Returns the resolved `pages_root` path                             |

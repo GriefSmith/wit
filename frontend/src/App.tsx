@@ -177,6 +177,7 @@ export default function App() {
     loadError: null,
     saveError: null,
     witLinkNotice: null,
+    overlayStale: false,
   });
 
   const canSave =
@@ -184,6 +185,12 @@ export default function App() {
     !editorHeader.loading &&
     !editorHeader.saving &&
     editorHeader.dirty &&
+    !editorHeader.loadError;
+
+  const canReloadFromMarkdown =
+    Boolean(resolvedSelectedId) &&
+    !editorHeader.loading &&
+    !editorHeader.saving &&
     !editorHeader.loadError;
 
   const handlePageRenamed = useCallback(
@@ -363,12 +370,25 @@ export default function App() {
             >
               {editorHeader.saving ? "Saving…" : "Save"}
             </button>
+            <button
+              type="button"
+              className="secondary"
+              disabled={!canReloadFromMarkdown}
+              onClick={() => void editorRef.current?.reloadFromMarkdown()}
+            >
+              Reload from markdown
+            </button>
 
             {editorHeader.loading ? (
               <small className="wit-muted">Loading…</small>
             ) : null}
             {editorHeader.dirty ? (
               <small className="wit-muted">Unsaved changes</small>
+            ) : null}
+            {editorHeader.overlayStale ? (
+              <small className="wit-muted">
+                Markdown file changed outside the editor
+              </small>
             ) : null}
 
             {editorHeader.saveError ? (

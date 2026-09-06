@@ -33,13 +33,18 @@ class PageDetailResponse(BaseModel):
     frontmatter: dict[str, Any]
     markdown_body: str
     editor_overlay: str | None = None
+    overlay_stale: bool = False
 
 
 class PutPageBody(BaseModel):
     markdown_body: str
     editor_overlay: str | None = Field(
         default=None,
-        description="Optional JSON editor overlay ({version:2,document:[...]}). Omit or null to leave unchanged; empty string deletes overlay.",
+        description=(
+            "Optional JSON editor overlay ({version:3,document:[...]}). "
+            "Omit or null to leave unchanged; empty string deletes overlay. "
+            "The server stamps markdown_sha256 from the stored markdown body."
+        ),
     )
 
 

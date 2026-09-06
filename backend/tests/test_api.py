@@ -1,9 +1,11 @@
 from pathlib import Path
+import json
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.storage import markdown_body_hash, read_page_split
 
 
 @pytest.fixture()
@@ -50,6 +52,7 @@ def test_get_page(client: TestClient) -> None:
     data = r.json()
     assert data["markdown_body"].strip() == "World"
     assert data.get("editor_overlay") in (None, "")
+    assert data.get("overlay_stale") is False
 
 
 def test_put_roundtrip(client: TestClient) -> None:
@@ -68,10 +71,17 @@ def test_editor_overlay_sidecar(client: TestClient, tmp_path: Path) -> None:
     assert r.status_code == 200
     sidecar = tmp_path / ".wit" / "editor" / "b.json"
     assert sidecar.is_file()
-    assert sidecar.read_text(encoding="utf-8") == ov
+    stamped = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert stamped["version"] == 3
+    assert stamped["document"] == []
+    split = read_page_split("b")
+    assert split is not None
+    _, body = split
+    assert stamped["markdown_sha256"] == markdown_body_hash(body)
     data = client.get("/pages/b").json()
     assert data["markdown_body"].strip() == "# Title"
-    assert data["editor_overlay"] == ov
+    assert data["overlay_stale"] is False
+    assert json.loads(data["editor_overlay"]) == stamped
 
 
 def test_editor_overlay_delete(client: TestClient, tmp_path: Path) -> None:
@@ -105,6 +115,7 @@ def test_patch_order(client: TestClient, tmp_path: Path) -> None:
 def test_rename_page_id(client: TestClient, tmp_path: Path) -> None:
     ov = '{"version":2,"document":[]}\n'
     client.put("/pages/a", json={"markdown_body": "Text\n", "editor_overlay": ov})
+    stamped = (tmp_path / ".wit" / "editor" / "a.json").read_text(encoding="utf-8")
     r = client.patch("/pages/a/meta", json={"new_id": "alpha-root"})
     assert r.status_code == 200
     assert r.json()["id"] == "alpha-root"
@@ -113,7 +124,7 @@ def test_rename_page_id(client: TestClient, tmp_path: Path) -> None:
     assert not (tmp_path / ".wit" / "editor" / "a.json").exists()
     assert (tmp_path / ".wit" / "editor" / "alpha-root.json").read_text(
         encoding="utf-8"
-    ) == ov
+    ) == stamped
     text_a = (tmp_path / "alpha-root.md").read_text(encoding="utf-8")
     assert "id: alpha-root" in text_a or 'id: "alpha-root"' in text_a
     text_b = (tmp_path / "b.md").read_text(encoding="utf-8")
@@ -194,3 +205,62 @@ parent: ""
     data = r.json()
     assert len(data["duplicate_warnings"]) == 1
     assert data["duplicate_warnings"][0]["id"] == "a"
+
+
+def test_stale_overlay_omitted_when_markdown_edited(
+    client: TestClient, tmp_path: Path
+) -> None:
+    ov = '{"version":2,"document":[{"id":"keep","type":"paragraph","content":[]}]}'
+    client.put(
+        "/pages/b",
+        json={"markdown_body": "Original\n", "editor_overlay": ov},
+    )
+    sidecar = tmp_path / ".wit" / "editor" / "b.json"
+    stamped = sidecar.read_text(encoding="utf-8")
+    path = tmp_path / "b.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("Original", "Edited on disk"),
+        encoding="utf-8",
+    )
+    data = client.get("/pages/b").json()
+    assert "Edited on disk" in data["markdown_body"]
+    assert data["overlay_stale"] is True
+    assert data.get("editor_overlay") in (None, "")
+    assert sidecar.read_text(encoding="utf-8") == stamped
+
+
+def test_v2_overlay_without_hash_kept_after_disk_edit(
+    client: TestClient, tmp_path: Path
+) -> None:
+    overlay_dir = tmp_path / ".wit" / "editor"
+    overlay_dir.mkdir(parents=True)
+    raw = '{"version":2,"document":[]}'
+    (overlay_dir / "b.json").write_text(raw, encoding="utf-8")
+    path = tmp_path / "b.md"
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("World", "Changed"),
+        encoding="utf-8",
+    )
+    data = client.get("/pages/b").json()
+    assert "Changed" in data["markdown_body"]
+    assert data["overlay_stale"] is False
+    assert data["editor_overlay"] == raw
+
+
+def test_delete_overlay(client: TestClient, tmp_path: Path) -> None:
+    client.put(
+        "/pages/b",
+        json={
+            "markdown_body": "Hi\n",
+            "editor_overlay": '{"version":2,"document":[]}',
+        },
+    )
+    sidecar = tmp_path / ".wit" / "editor" / "b.json"
+    assert sidecar.is_file()
+    r = client.delete("/pages/b/overlay")
+    assert r.status_code == 204
+    assert not sidecar.exists()
+    data = client.get("/pages/b").json()
+    assert data.get("editor_overlay") in (None, "")
+    assert data["overlay_stale"] is False
+    assert client.delete("/pages/missing/overlay").status_code == 404

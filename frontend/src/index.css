@@ -1297,6 +1297,45 @@ html[data-theme='dark'] .wit-pin-preview-card {
   flex-direction: column;
 }
 
+.wit-overlay-stale-banner {
+  flex-shrink: 0;
+  z-index: 6;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0.45rem 7.75rem 0 0.65rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-left-width: 3px;
+  border-left-color: var(--pico-primary);
+  border-radius: var(--pico-border-radius);
+  background: color-mix(in srgb, var(--pico-background-color) 88%, var(--pico-primary));
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-family: var(--wit-font-sidebar);
+}
+
+.wit-overlay-stale-banner p {
+  margin: 0;
+}
+
+.wit-overlay-stale-banner-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.wit-overlay-stale-banner-btn {
+  margin: 0;
+  width: auto;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  font-family: var(--wit-font-sidebar);
+  font-weight: 500;
+}
+
 .wit-page-nav {
   position: absolute;
   inset: 0;

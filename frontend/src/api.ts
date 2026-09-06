@@ -43,6 +43,16 @@ export async function putPageContent(
   }
 }
 
+export async function deletePageOverlay(id: string): Promise<void> {
+  const r = await fetch(`/pages/${encodeURIComponent(id)}/overlay`, {
+    method: 'DELETE',
+  })
+  if (!r.ok) {
+    const text = await r.text()
+    throw new Error(text || r.statusText || String(r.status))
+  }
+}
+
 export async function createPage(body: {
   title: string
   parent?: string

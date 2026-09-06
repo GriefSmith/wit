@@ -11,7 +11,7 @@ import {
 } from 'react'
 import type { PointerEvent } from 'react'
 
-import { fetchPage, putPageContent } from '../api'
+import { deletePageOverlay, fetchPage, putPageContent } from '../api'
 import { extractStructuralOverlay, parseStoredPageBody } from '../lib/blocknotePersistence'
 import { isWitPageHref, witHrefToPageId } from '../lib/internalLinks'
 import { witBlockNoteSchema } from '../lib/witBlockNoteSchema'
@@ -22,6 +22,7 @@ import { witEditorSideMenu } from './WitEditorSideMenu'
 
 export type PageEditorHandle = {
   save: () => Promise<void>
+  reloadFromMarkdown: () => Promise<void>
 }
 
 export type PageEditorHeaderState = {
@@ -31,6 +32,7 @@ export type PageEditorHeaderState = {
   loadError: string | null
   saveError: string | null
   witLinkNotice: string | null
+  overlayStale: boolean
 }
 
 type Props = {
@@ -53,6 +55,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [witLinkNotice, setWitLinkNotice] = useState<string | null>(null)
+  const [overlayStale, setOverlayStale] = useState(false)
+  const [overlayNoticeDismissed, setOverlayNoticeDismissed] = useState(false)
   const surfaceRef = useRef<HTMLDivElement>(null)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
 
@@ -105,10 +109,26 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     [navigateIfKnown],
   )
 
+  const applyFetchedDoc = useCallback(
+    (doc: { markdown_body: string; editor_overlay?: string | null; overlay_stale?: boolean }) => {
+      const blocks = parseStoredPageBody(
+        editor,
+        doc.markdown_body,
+        doc.editor_overlay ?? undefined,
+      )
+      editor.replaceBlocks(editor.document, blocks as typeof editor.document)
+      setOverlayStale(Boolean(doc.overlay_stale))
+      setOverlayNoticeDismissed(false)
+    },
+    [editor],
+  )
+
   useEffect(() => {
     if (!pageId) {
       setLoadError(null)
       setDirty(false)
+      setOverlayStale(false)
+      setOverlayNoticeDismissed(false)
       return
     }
 
@@ -116,18 +136,15 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     setLoading(true)
     setLoadError(null)
     setDirty(false)
+    setOverlayStale(false)
+    setOverlayNoticeDismissed(false)
 
     fetchPage(pageId)
       .then((doc) => {
         if (cancelled) {
           return
         }
-        const blocks = parseStoredPageBody(
-          editor,
-          doc.markdown_body,
-          doc.editor_overlay ?? undefined,
-        )
-        editor.replaceBlocks(editor.document, blocks as typeof editor.document)
+        applyFetchedDoc(doc)
       })
       .catch((e: unknown) => {
         if (!cancelled) {
@@ -145,7 +162,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     return () => {
       cancelled = true
     }
-  }, [pageId, editor])
+  }, [pageId, editor, applyFetchedDoc])
 
   const save = useCallback(async () => {
     if (!pageId) {
@@ -161,6 +178,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
         editor_overlay: overlay,
       })
       setDirty(false)
+      setOverlayStale(false)
+      setOverlayNoticeDismissed(false)
     } catch (e: unknown) {
       setSaveError(e instanceof Error ? e.message : 'Save failed')
     } finally {
@@ -168,12 +187,43 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     }
   }, [editor, pageId])
 
+  const reloadFromMarkdown = useCallback(
+    async (options?: { confirm?: boolean }) => {
+      if (!pageId) {
+        return
+      }
+      if (options?.confirm !== false) {
+        const warn = dirty
+          ? 'You have unsaved changes. Reload from the markdown file anyway? Editor-only structure will be rebuilt.'
+          : 'Reload this page from the markdown file? Editor-only structure (block ids, empty blocks) will be rebuilt.'
+        if (!window.confirm(warn)) {
+          return
+        }
+      }
+      setSaveError(null)
+      setLoading(true)
+      try {
+        await deletePageOverlay(pageId)
+        const doc = await fetchPage(pageId)
+        applyFetchedDoc(doc)
+        setDirty(false)
+        setOverlayStale(false)
+      } catch (e: unknown) {
+        setSaveError(e instanceof Error ? e.message : 'Reload failed')
+      } finally {
+        setLoading(false)
+      }
+    },
+    [applyFetchedDoc, dirty, pageId],
+  )
+
   useImperativeHandle(
     ref,
     () => ({
       save,
+      reloadFromMarkdown,
     }),
-    [save],
+    [save, reloadFromMarkdown],
   )
 
   useEffect(() => {
@@ -184,8 +234,18 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       loadError,
       saveError,
       witLinkNotice,
+      overlayStale,
     })
-  }, [onHeaderStateChange, loading, saving, dirty, loadError, saveError, witLinkNotice])
+  }, [
+    onHeaderStateChange,
+    loading,
+    saving,
+    dirty,
+    loadError,
+    saveError,
+    witLinkNotice,
+    overlayStale,
+  ])
 
   const bindScrollRoot = useCallback(() => {
     const el = surfaceRef.current?.querySelector<HTMLElement>('.bn-editor')
@@ -226,6 +286,31 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       className="wit-editor-surface"
       onPointerDownCapture={handleEditorPointerDown}
     >
+      {overlayStale && !overlayNoticeDismissed ? (
+        <div className="wit-overlay-stale-banner" role="status">
+          <p>
+            This page was edited outside the editor. Showing the markdown file;
+            block identities were rebuilt.
+          </p>
+          <div className="wit-overlay-stale-banner-actions">
+            <button
+              type="button"
+              className="wit-overlay-stale-banner-btn"
+              onClick={() => setOverlayNoticeDismissed(true)}
+            >
+              Dismiss
+            </button>
+            <button
+              type="button"
+              className="wit-overlay-stale-banner-btn"
+              onClick={() => void reloadFromMarkdown({ confirm: false })}
+              disabled={loading || saving}
+            >
+              Discard editor cache
+            </button>
+          </div>
+        </div>
+      ) : null}
       <PageNavButtons
         pageId={pageId}
         pages={pages}
