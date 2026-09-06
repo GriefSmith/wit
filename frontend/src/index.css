@@ -1498,28 +1498,32 @@ html[data-theme='dark'] .wit-pin-preview-card {
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* Cancel Pico's default block margin-bottom on <details> — an
+     asymmetric (bottom-only) margin shifts the centered flex item
+     upward relative to its siblings in the header row. */
+  margin: 0;
 }
 
 .wit-app-settings-summary {
   cursor: pointer;
   user-select: none;
   list-style: none;
-  width: 2rem;
-  height: 2rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--pico-border-radius);
   background: transparent;
   padding: 0;
   margin: 0;
-  line-height: 1;
-  font-size: 1.1rem;
-  text-align: center;
-  vertical-align: middle;
-  transform: none;
   color: var(--pico-muted-color);
+}
+
+.wit-app-settings-summary svg {
+  display: block;
 }
 
 .wit-app-settings-summary:hover {
