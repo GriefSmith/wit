@@ -328,7 +328,6 @@ export default function App() {
       <header className="container wit-app-header">
         <div className="wit-app-header-left">
           <h1>wit</h1>
-          <p>Local markdown notebook</p>
         </div>
 
         <PageSearch pages={pages} onSelect={setSelectedId} />

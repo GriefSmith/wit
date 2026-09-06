@@ -6,7 +6,6 @@ import {
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
-import { RiSearchLine } from "react-icons/ri";
 
 import { createPagesFuse } from "../lib/search";
 import type { PageMeta } from "../types";
@@ -123,10 +122,10 @@ export function PageSearch({ pages, onSelect }: Props) {
   return (
     <div className="wit-page-search" ref={wrapRef}>
       <label className="wit-page-search-label">
-        <RiSearchLine size={15} aria-hidden className="wit-page-search-icon" />
         <input
           ref={inputRef}
-          type="search"
+          type="text"
+          role="searchbox"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -139,6 +138,7 @@ export function PageSearch({ pages, onSelect }: Props) {
           aria-expanded={showResults}
           aria-controls="wit-page-search-results"
           aria-autocomplete="list"
+          autoComplete="off"
           className="wit-page-search-input"
         />
         {query ? null : (
