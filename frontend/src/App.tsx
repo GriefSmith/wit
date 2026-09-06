@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -10,8 +9,8 @@ import {
 } from "react";
 
 import { PageEditor } from "./components/PageEditor";
+import { PageSearch } from "./components/PageSearch";
 import { PinnedBlockPreviewModal } from "./components/PinnedBlockPreviewModal";
-import { PinnedSection } from "./components/PinnedSection";
 import { SidebarTree } from "./components/SidebarTree";
 import { WitCollapsedPinControl } from "./components/WitCollapsedPinControl";
 import { WitSettingsMenu } from "./components/WitSettingsMenu";
@@ -36,9 +35,8 @@ import type {
   FontPresetName,
   TextSizeName,
 } from "./lib/witAppearance";
-import { createPagesFuse } from "./lib/search";
 import { formatPageRouteCrumb, pageTitleTrail } from "./lib/tree";
-import type { PageMeta, WitPin } from "./types";
+import type { WitPin } from "./types";
 import type {
   PageEditorHandle,
   PageEditorHeaderState,
@@ -124,7 +122,6 @@ export default function App() {
   const witPins = useWitPins();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewPin, setPreviewPin] = useState<WitPin | null>(null);
-  const [query, setQuery] = useState("");
   const [accent, setAccent] = useState<AccentName>(() => readStoredAccent());
   const [fontPreset, setFontPreset] = useState<FontPresetName>(() =>
     readStoredFontPreset(),
@@ -141,21 +138,10 @@ export default function App() {
   const colorScheme = resolveEffectiveColorScheme(bgTheme, systemColorScheme);
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
   const [sidebarWidthPx, setSidebarWidthPx] = useState(readSidebarWidth);
-  const deferredQuery = useDeferredValue(query);
 
   const pages = useMemo(() => data?.pages ?? [], [data]);
 
   const resolvedSelectedId = selectedId ?? pages[0]?.id ?? null;
-
-  const fuse = useMemo(() => createPagesFuse(pages), [pages]);
-
-  const searchHits = useMemo(() => {
-    const q = deferredQuery.trim();
-    if (!q) {
-      return null;
-    }
-    return fuse.search(q).map((r) => r.item as PageMeta);
-  }, [deferredQuery, fuse]);
 
   const collapsedRouteLabel = useMemo(() => {
     if (sidebarOpen || !resolvedSelectedId) {
@@ -337,22 +323,6 @@ export default function App() {
     [],
   );
 
-  const searchSection = (
-    <div className="wit-sidebar-search">
-      <label className="wit-sidebar-search-label">
-        <span className="wit-sidebar-search-heading">Search</span>
-        <input
-          type="search"
-          placeholder="Titles, tags…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          aria-label="Search pages"
-          className="wit-sidebar-search-input"
-        />
-      </label>
-    </div>
-  );
-
   return (
     <div className="wit-app">
       <header className="container wit-app-header">
@@ -360,6 +330,8 @@ export default function App() {
           <h1>wit</h1>
           <p>Local markdown notebook</p>
         </div>
+
+        <PageSearch pages={pages} onSelect={setSelectedId} />
 
         <div className="wit-app-header-right">
           <div className="wit-app-header-save">
@@ -461,65 +433,16 @@ export default function App() {
               ) : null}
 
               <div className="wit-sidebar-body">
-                {searchHits ? (
-                  <>
-                    <PinnedSection
-                      pages={pages}
-                      selectedPageId={resolvedSelectedId}
-                      onPreviewPin={openPinPreview}
-                    />
-                    <nav
-                      className="wit-sidebar-scroll wit-sidebar-scroll--search"
-                      aria-label="Search results"
-                    >
-                      <ul>
-                        {searchHits.length === 0 ? (
-                          <li>No matches</li>
-                        ) : (
-                          searchHits.map((p) => (
-                            <li key={p.id}>
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setSelectedId(p.id);
-                                }}
-                              >
-                                {p.title}
-                              </a>
-                              <small
-                                className="wit-muted"
-                                style={{ display: "block" }}
-                              >
-                                {p.tags.join(", ")}
-                              </small>
-                            </li>
-                          ))
-                        )}
-                      </ul>
-                    </nav>
-                  </>
-                ) : (
-                  <>
-                    <SidebarTree
-                      pages={pages}
-                      selectedId={resolvedSelectedId}
-                      onSelect={setSelectedId}
-                      onStructureChange={handleStructureChange}
-                      onPageCreated={setSelectedId}
-                      onPageRenamed={handlePageRenamed}
-                      onPageDeleted={handlePageDeleted}
-                    />
-                    <PinnedSection
-                      pages={pages}
-                      selectedPageId={resolvedSelectedId}
-                      onPreviewPin={openPinPreview}
-                    />
-                  </>
-                )}
+                <SidebarTree
+                  pages={pages}
+                  selectedId={resolvedSelectedId}
+                  onSelect={setSelectedId}
+                  onStructureChange={handleStructureChange}
+                  onPageCreated={setSelectedId}
+                  onPageRenamed={handlePageRenamed}
+                  onPageDeleted={handlePageDeleted}
+                />
               </div>
-
-              {searchSection}
             </aside>
           ) : null}
 
@@ -554,11 +477,15 @@ export default function App() {
           ) : null}
 
           <main className="wit-main">
-            {!sidebarOpen ? (
-              <div
-                className="wit-sidebar-collapse-rail"
-                aria-label="Collapsed sidebar controls"
-              >
+            <div
+              className={
+                sidebarOpen
+                  ? "wit-sidebar-collapse-rail wit-sidebar-collapse-rail--with-sidebar"
+                  : "wit-sidebar-collapse-rail"
+              }
+              aria-label="Sidebar controls"
+            >
+              {!sidebarOpen ? (
                 <button
                   type="button"
                   className="wit-sidebar-float-toggle"
@@ -568,12 +495,12 @@ export default function App() {
                 >
                   <ChevronRightIcon />
                 </button>
-                <WitCollapsedPinControl
-                  pages={pages}
-                  onPreviewPin={openPinPreview}
-                />
-              </div>
-            ) : null}
+              ) : null}
+              <WitCollapsedPinControl
+                pages={pages}
+                onPreviewPin={openPinPreview}
+              />
+            </div>
             <div className="wit-main-body">
               {!sidebarOpen && collapsedRouteLabel ? (
                 <nav

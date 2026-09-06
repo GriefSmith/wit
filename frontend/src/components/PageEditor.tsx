@@ -205,7 +205,14 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       try {
         await deletePageOverlay(pageId)
         const doc = await fetchPage(pageId)
-        applyFetchedDoc(doc)
+        applyFetchedDoc({
+          ...doc,
+          editor_overlay: null,
+          overlay_stale: false,
+        })
+        await putPageContent(pageId, {
+          editor_overlay: extractStructuralOverlay(editor.document),
+        })
         setDirty(false)
         setOverlayStale(false)
       } catch (e: unknown) {
@@ -214,7 +221,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
         setLoading(false)
       }
     },
-    [applyFetchedDoc, dirty, pageId],
+    [applyFetchedDoc, dirty, editor, pageId],
   )
 
   useImperativeHandle(

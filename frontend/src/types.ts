@@ -35,7 +35,7 @@ export type PageTreeNode = {
   children?: PageTreeNode[]
 }
 
-/** Local-only pin to a BlockNote block for quick navigation from the sidebar. */
+/** Local-only pin to a BlockNote block for quick navigation from the pin menu. */
 export type WitPin = {
   pageId: string
   blockId: string

@@ -37,7 +37,10 @@ class PageDetailResponse(BaseModel):
 
 
 class PutPageBody(BaseModel):
-    markdown_body: str
+    markdown_body: str | None = Field(
+        default=None,
+        description="Markdown body. Omit or null to leave the file unchanged.",
+    )
     editor_overlay: str | None = Field(
         default=None,
         description=(

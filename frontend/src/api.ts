@@ -30,7 +30,7 @@ export async function fetchPage(id: string): Promise<PageDetail> {
 
 export async function putPageContent(
   id: string,
-  payload: { markdown_body: string; editor_overlay?: string | null },
+  payload: { markdown_body?: string; editor_overlay?: string | null },
 ): Promise<void> {
   const r = await fetch(`/pages/${encodeURIComponent(id)}`, {
     method: 'PUT',
@@ -47,10 +47,12 @@ export async function deletePageOverlay(id: string): Promise<void> {
   const r = await fetch(`/pages/${encodeURIComponent(id)}/overlay`, {
     method: 'DELETE',
   })
-  if (!r.ok) {
-    const text = await r.text()
-    throw new Error(text || r.statusText || String(r.status))
+  // 204 has an empty body; Vite's proxy can also surface it as a failed fetch.
+  if (r.status === 204 || r.ok) {
+    return
   }
+  const text = await r.text()
+  throw new Error(text || r.statusText || String(r.status))
 }
 
 export async function createPage(body: {

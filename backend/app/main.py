@@ -108,20 +108,24 @@ def get_page(page_id: str) -> PageDetailResponse:
 @app.put("/pages/{page_id}")
 def put_page(page_id: str, body: PutPageBody) -> dict[str, str]:
     _require_valid_id(page_id)
-    ok = write_page_body(page_id, body.markdown_body)
-    if not ok:
-        raise HTTPException(status_code=404, detail="page not found")
+    if body.markdown_body is None and body.editor_overlay is None:
+        raise HTTPException(status_code=400, detail="no fields to update")
+    if body.markdown_body is not None:
+        ok = write_page_body(page_id, body.markdown_body)
+        if not ok:
+            raise HTTPException(status_code=404, detail="page not found")
     if not apply_editor_overlay_put(page_id, body.editor_overlay):
         raise HTTPException(status_code=404, detail="page not found")
     return {"status": "saved"}
 
 
-@app.delete("/pages/{page_id}/overlay", status_code=204)
-def remove_overlay(page_id: str) -> None:
+@app.delete("/pages/{page_id}/overlay")
+def remove_overlay(page_id: str) -> dict[str, str]:
     _require_valid_id(page_id)
     if resolve_path_for_id(page_id) is None:
         raise HTTPException(status_code=404, detail="page not found")
     delete_editor_overlay(page_id)
+    return {"status": "deleted"}
 
 
 @app.delete("/pages/{page_id}", status_code=204)

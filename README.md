@@ -154,7 +154,7 @@ The backend serves a small REST API. All paths are relative to `http://127.0.0.1
 | `GET`    | `/pages`           | List all pages with metadata and tags index                        |
 | `POST`   | `/pages`           | Create a new page                                                  |
 | `GET`    | `/pages/{id}`          | Fetch page content (front-matter + markdown body + editor overlay) |
-| `PUT`    | `/pages/{id}`          | Overwrite page content and/or editor overlay                       |
+| `PUT`    | `/pages/{id}`          | Overwrite page content and/or editor overlay (either field may be omitted) |
 | `DELETE` | `/pages/{id}/overlay`  | Delete the editor sidecar so the next load reparses markdown       |
 | `DELETE` | `/pages/{id}`          | Delete a leaf page (fails if it has children)                      |
 | `PATCH`  | `/pages/{id}/meta` | Update title, parent, order, or rename the slug                    |

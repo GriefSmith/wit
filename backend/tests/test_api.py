@@ -258,9 +258,40 @@ def test_delete_overlay(client: TestClient, tmp_path: Path) -> None:
     sidecar = tmp_path / ".wit" / "editor" / "b.json"
     assert sidecar.is_file()
     r = client.delete("/pages/b/overlay")
-    assert r.status_code == 204
+    assert r.status_code == 200
+    assert r.json()["status"] == "deleted"
     assert not sidecar.exists()
     data = client.get("/pages/b").json()
     assert data.get("editor_overlay") in (None, "")
     assert data["overlay_stale"] is False
+    again = client.delete("/pages/b/overlay")
+    assert again.status_code == 200
+    assert again.json()["status"] == "deleted"
     assert client.delete("/pages/missing/overlay").status_code == 404
+
+
+def test_put_overlay_only_leaves_markdown_untouched(
+    client: TestClient, tmp_path: Path
+) -> None:
+    path = tmp_path / "b.md"
+    before = path.read_text(encoding="utf-8")
+    r = client.put(
+        "/pages/b",
+        json={"editor_overlay": '{"version":2,"document":[]}'},
+    )
+    assert r.status_code == 200
+    assert path.read_text(encoding="utf-8") == before
+    sidecar = tmp_path / ".wit" / "editor" / "b.json"
+    assert sidecar.is_file()
+    stamped = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert stamped["version"] == 3
+    assert stamped["document"] == []
+    split = read_page_split("b")
+    assert split is not None
+    _, body = split
+    assert stamped["markdown_sha256"] == markdown_body_hash(body)
+
+
+def test_put_requires_a_field(client: TestClient) -> None:
+    r = client.put("/pages/b", json={})
+    assert r.status_code == 400

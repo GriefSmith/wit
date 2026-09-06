@@ -43,7 +43,8 @@ src/
 ├── components/
 │   ├── PageEditor.tsx          # BlockNote editor with markdown persistence
 │   ├── SidebarTree.tsx         # Arborist tree for page hierarchy
-│   ├── PinnedSection.tsx       # Pinned blocks panel
+│   ├── PageSearch.tsx          # Header search over page titles/tags
+│   ├── WitCollapsedPinControl.tsx # Pin icon + dropdown
 │   └── …
 ├── hooks/
 │   └── usePages.ts     # SWR-style hook for /pages
