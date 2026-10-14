@@ -116,7 +116,11 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
         doc.markdown_body,
         doc.editor_overlay ?? undefined,
       )
-      editor.replaceBlocks(editor.document, blocks as typeof editor.document)
+      // Loading is not an edit: keep it out of undo so Cmd+Z cannot blank the page.
+      editor.transact((tr) => {
+        tr.setMeta('addToHistory', false)
+        editor.replaceBlocks(editor.document, blocks as typeof editor.document)
+      })
       setOverlayStale(Boolean(doc.overlay_stale))
       setOverlayNoticeDismissed(false)
     },
