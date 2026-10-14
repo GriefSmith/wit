@@ -15,6 +15,8 @@ type Props = {
   pages: PageMeta[]
   colorScheme: 'light' | 'dark'
   onClose: () => void
+  /** Navigate to the pin's page and scroll to the pinned block. */
+  onOpenInPage: (pin: WitPin) => void
 }
 
 function pageTitle(pages: PageMeta[], pageId: string): string {
@@ -26,9 +28,10 @@ type BodyProps = {
   pages: PageMeta[]
   colorScheme: 'light' | 'dark'
   onClose: () => void
+  onOpenInPage: (pin: WitPin) => void
 }
 
-function PinnedBlockPreviewBody({ pin, pages, colorScheme, onClose }: BodyProps) {
+function PinnedBlockPreviewBody({ pin, pages, colorScheme, onClose, onOpenInPage }: BodyProps) {
   const editor = useCreateBlockNote(
     { schema: witBlockNoteSchema },
     [`${pin.pageId}::${pin.blockId}`],
@@ -104,9 +107,19 @@ function PinnedBlockPreviewBody({ pin, pages, colorScheme, onClose }: BodyProps)
             <span className="wit-pin-type-pill">{pin.blockType}</span>
           </p>
         </div>
-        <button type="button" className="secondary wit-pin-preview-close" onClick={onClose}>
-          Close
-        </button>
+        <div className="wit-pin-preview-actions">
+          <button
+            type="button"
+            className="wit-pin-preview-open"
+            disabled={phase !== 'ready'}
+            onClick={() => onOpenInPage(pin)}
+          >
+            Open in page
+          </button>
+          <button type="button" className="secondary wit-pin-preview-close" onClick={onClose}>
+            Close
+          </button>
+        </div>
       </header>
 
       {phase === 'loading' ? (
@@ -127,7 +140,13 @@ function PinnedBlockPreviewBody({ pin, pages, colorScheme, onClose }: BodyProps)
   )
 }
 
-export function PinnedBlockPreviewModal({ pin, pages, colorScheme, onClose }: Props) {
+export function PinnedBlockPreviewModal({
+  pin,
+  pages,
+  colorScheme,
+  onClose,
+  onOpenInPage,
+}: Props) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -162,6 +181,7 @@ export function PinnedBlockPreviewModal({ pin, pages, colorScheme, onClose }: Pr
           pages={pages}
           colorScheme={colorScheme}
           onClose={onClose}
+          onOpenInPage={onOpenInPage}
         />
       ) : null}
     </dialog>

@@ -1047,8 +1047,14 @@ html[data-theme='dark'] .wit-pin-preview-card {
   gap: 0.35rem;
 }
 
-.wit-pin-preview-close {
+.wit-pin-preview-actions {
+  display: flex;
   flex-shrink: 0;
+  gap: 0.5rem;
+}
+
+.wit-pin-preview-open,
+.wit-pin-preview-close {
   margin: 0;
 }
 

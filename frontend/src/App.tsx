@@ -268,6 +268,15 @@ export default function App() {
     setPreviewPin(null);
   }, []);
 
+  const openPinInPage = useCallback(
+    (pin: WitPin) => {
+      if (navigate(pin.pageId, { blockId: pin.blockId })) {
+        setPreviewPin(null);
+      }
+    },
+    [navigate],
+  );
+
   useEffect(() => {
     if (typeof document === "undefined") {
       return;
@@ -592,6 +601,7 @@ export default function App() {
             pages={pages}
             colorScheme={colorScheme}
             onClose={closePinPreview}
+            onOpenInPage={openPinInPage}
           />
         </div>
       </div>
