@@ -167,6 +167,7 @@ export default function App() {
   const {
     pageId: resolvedSelectedId,
     scrollTarget,
+    editorSession,
     navigate,
     renameCurrent,
     recordAnchor,
@@ -515,6 +516,9 @@ export default function App() {
                   onPageCreated={navigate}
                   onPageRenamed={handlePageRenamed}
                   onPageDeleted={handlePageDeleted}
+                  unsavedPageId={
+                    editorHeader.dirty ? resolvedSelectedId : null
+                  }
                 />
               </div>
             </aside>
@@ -587,6 +591,7 @@ export default function App() {
               <PageEditor
                 ref={editorRef}
                 pageId={resolvedSelectedId}
+                editorSession={editorSession}
                 pages={pages}
                 colorScheme={colorScheme}
                 onNavigateToPage={navigate}

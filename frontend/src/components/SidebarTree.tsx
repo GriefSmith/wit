@@ -137,6 +137,8 @@ type Props = {
   onPageRenamed?: (previousId: string, nextId: string) => void
   /** Called after a page file was removed from disk. */
   onPageDeleted?: (deletedId: string) => void
+  /** Page with unsaved editor changes, if any; deleting it discards them. */
+  unsavedPageId?: string | null
 }
 
 export function SidebarTree({
@@ -147,6 +149,7 @@ export function SidebarTree({
   onPageCreated,
   onPageRenamed,
   onPageDeleted,
+  unsavedPageId = null,
 }: Props) {
   const data = useMemo(() => flatToTree(pages), [pages])
   const treeRef = useRef<TreeApi<PageTreeNode> | undefined>(undefined)
@@ -405,6 +408,9 @@ export function SidebarTree({
                 <span className="wit-delete-consequences-label">Before you continue</span>
                 <ul>
                   <li>You can't undo this.</li>
+                  {deleteMeta.id === unsavedPageId ? (
+                    <li>Your unsaved changes on this page will be lost.</li>
+                  ) : null}
                   <li>If this page has subpages, delete or move them first.</li>
                 </ul>
               </div>

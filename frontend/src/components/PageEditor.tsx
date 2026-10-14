@@ -1,15 +1,15 @@
 import { BlockNoteView } from '@blocknote/mantine'
 import { SideMenuController, useCreateBlockNote } from '@blocknote/react'
 import {
-  forwardRef,
   useCallback,
   useEffect,
+  useEffectEvent,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
 } from 'react'
-import type { PointerEvent } from 'react'
+import type { PointerEvent, Ref } from 'react'
 
 import { deletePageOverlay, fetchPage, putPageContent } from '../api'
 import { extractStructuralOverlay, parseStoredPageBody } from '../lib/blocknotePersistence'
@@ -53,7 +53,11 @@ export type PageEditorHeaderState = {
 }
 
 type Props = {
+  /** A plain prop, not `forwardRef`: React 19.2 leaves `useEffectEvent` stale inside `forwardRef`. */
+  ref?: Ref<PageEditorHandle>
   pageId: string | null
+  /** A new value opens a fresh editor; a `pageId` change alone (rename) keeps the current one. */
+  editorSession: number
   pages: PageMeta[]
   onNavigateToPage: (pageId: string) => void
   onHeaderStateChange?: (state: PageEditorHeaderState) => void
@@ -64,19 +68,18 @@ type Props = {
   onScrollAnchorChange?: (pageId: string, anchor: ScrollAnchor) => void
 }
 
-export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEditor(
-  {
-    pageId,
-    pages,
-    onNavigateToPage,
-    onHeaderStateChange,
-    colorScheme,
-    scrollTarget,
-    onScrollAnchorChange,
-  },
+export function PageEditor({
   ref,
-) {
-  const editor = useCreateBlockNote({ schema: witBlockNoteSchema }, [pageId])
+  pageId,
+  editorSession,
+  pages,
+  onNavigateToPage,
+  onHeaderStateChange,
+  colorScheme,
+  scrollTarget,
+  onScrollAnchorChange,
+}: Props) {
+  const editor = useCreateBlockNote({ schema: witBlockNoteSchema }, [editorSession])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
@@ -86,9 +89,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
   const [overlayStale, setOverlayStale] = useState(false)
   const [overlayNoticeDismissed, setOverlayNoticeDismissed] = useState(false)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
-  const scrollTargetRef = useRef(scrollTarget)
-  /** Page whose content is currently in the editor; null while loading. */
-  const loadedPageIdRef = useRef<string | null>(null)
+  /** Editor instance whose page content has finished loading. */
+  const loadedEditorRef = useRef<WitEditor | null>(null)
   const releaseHoldRef = useRef<(() => void) | null>(null)
 
   const pageIdSet = useMemo(() => new Set(pages.map((p) => p.id)), [pages])
@@ -174,15 +176,23 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
 
   useEffect(() => () => releaseHoldRef.current?.(), [editor])
 
-  useEffect(() => {
-    scrollTargetRef.current = scrollTarget
-    if (loadedPageIdRef.current === pageId) {
-      scrollTo(scrollTarget)
+  const applyScrollTarget = useEffectEvent((target: ScrollTarget | null) => {
+    if (loadedEditorRef.current === editor) {
+      scrollTo(target)
     }
-  }, [scrollTarget, pageId, scrollTo])
+  })
 
   useEffect(() => {
-    loadedPageIdRef.current = null
+    applyScrollTarget(scrollTarget)
+  }, [scrollTarget])
+
+  const finishLoad = useEffectEvent((doc: Awaited<ReturnType<typeof fetchPage>>) => {
+    applyFetchedDoc(doc)
+    loadedEditorRef.current = editor
+    scrollTo(scrollTarget)
+  })
+
+  const startLoad = useEffectEvent((isCancelled: () => boolean) => {
     if (!pageId) {
       setLoadError(null)
       setDirty(false)
@@ -191,7 +201,6 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       return
     }
 
-    let cancelled = false
     setLoading(true)
     setLoadError(null)
     setDirty(false)
@@ -200,30 +209,31 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
 
     fetchPage(pageId)
       .then((doc) => {
-        if (cancelled) {
-          return
+        if (!isCancelled()) {
+          finishLoad(doc)
         }
-        applyFetchedDoc(doc)
-        loadedPageIdRef.current = pageId
-        scrollTo(scrollTargetRef.current)
       })
       .catch((e: unknown) => {
-        if (!cancelled) {
+        if (!isCancelled()) {
           setLoadError(e instanceof Error ? e.message : 'Load failed')
         }
       })
       .finally(() => {
-        if (!cancelled) {
+        if (!isCancelled()) {
           queueMicrotask(() => {
             setLoading(false)
           })
         }
       })
+  })
 
+  useEffect(() => {
+    let cancelled = false
+    startLoad(() => cancelled)
     return () => {
       cancelled = true
     }
-  }, [pageId, editor, applyFetchedDoc, scrollTo])
+  }, [editorSession, editor])
 
   const save = useCallback(async () => {
     if (!pageId) {
@@ -295,7 +305,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       save,
       reloadFromMarkdown,
       captureScrollAnchor: () => {
-        if (!pageId || loadedPageIdRef.current !== pageId) {
+        if (!pageId || loadedEditorRef.current !== editor) {
           return null
         }
         const root = mountedEditorElement(editor)
@@ -343,7 +353,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     }
     let timer: number | undefined
     const onScroll = () => {
-      if (releaseHoldRef.current || loadedPageIdRef.current !== pageId) {
+      if (releaseHoldRef.current || loadedEditorRef.current !== editor) {
         return
       }
       window.clearTimeout(timer)
@@ -356,7 +366,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       window.clearTimeout(timer)
       scrollRoot.removeEventListener('scroll', onScroll)
     }
-  }, [scrollRoot, pageId, onScrollAnchorChange])
+  }, [scrollRoot, pageId, editor, onScrollAnchorChange])
 
   if (!pageId) {
     return <p className="wit-placeholder">Select a page from the tree.</p>
@@ -421,4 +431,4 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       </BlockNoteView>
     </div>
   )
-})
+}

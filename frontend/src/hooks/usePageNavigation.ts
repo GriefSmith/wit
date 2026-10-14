@@ -10,7 +10,8 @@ const LAST_LOCATION_KEY = 'wit-last-location'
 
 type HistoryEntry = { witPageId: string; anchor?: ScrollAnchor }
 
-type PageLocation = { pageId: string | null; target: ScrollTarget | null }
+/** `session` changes whenever a different page is opened; a rename keeps it. */
+type PageLocation = { pageId: string | null; target: ScrollTarget | null; session: number }
 
 function readHistoryEntry(): HistoryEntry | null {
   const s = window.history.state as Partial<HistoryEntry> | null
@@ -61,12 +62,12 @@ function initialLocation(): PageLocation {
   const last = readLastLocation()
   const pageId = fromUrl ?? last?.witPageId ?? null
   if (!pageId) {
-    return { pageId: null, target: null }
+    return { pageId: null, target: null, session: 0 }
   }
   const anchor =
     (entry?.witPageId === pageId ? entry.anchor : undefined) ??
     (last?.witPageId === pageId ? last.anchor : undefined)
-  return { pageId, target: anchor ?? null }
+  return { pageId, target: anchor ?? null, session: 0 }
 }
 
 type Options = {
@@ -104,7 +105,7 @@ export function usePageNavigation({ pages, pagesReady, canLeave, captureAnchor }
     if (pageId) {
       writeLastLocation({ witPageId: pageId })
     }
-    setLocation({ pageId, target })
+    setLocation((prev) => ({ pageId, target, session: prev.session + 1 }))
   }, [])
 
   const stampCurrentEntry = useCallback((anchor: ScrollAnchor | null) => {
@@ -124,7 +125,7 @@ export function usePageNavigation({ pages, pagesReady, canLeave, captureAnchor }
       const target = opts?.blockId ? blockJumpTarget(opts.blockId) : null
       if (pageId === current) {
         if (target) {
-          setLocation({ pageId, target })
+          setLocation((prev) => ({ ...prev, target }))
         }
         return true
       }
@@ -139,7 +140,7 @@ export function usePageNavigation({ pages, pagesReady, canLeave, captureAnchor }
     [commit, stampCurrentEntry],
   )
 
-  /** Swap the current entry without adding history (fallbacks, renames). */
+  /** Swap the current entry for another page without adding history. */
   const replace = useCallback(
     (pageId: string | null, target: ScrollTarget | null = null) => {
       const entry = pageId ? ({ witPageId: pageId } satisfies HistoryEntry) : null
@@ -149,14 +150,21 @@ export function usePageNavigation({ pages, pagesReady, canLeave, captureAnchor }
     [commit],
   )
 
-  const renameCurrent = useCallback(
-    (previousId: string, nextId: string) => {
-      if (currentIdRef.current === previousId) {
-        replace(nextId, captureAnchorRef.current())
-      }
-    },
-    [replace],
-  )
+  /** Same page under a new id: the open editor (and its unsaved edits) stays. */
+  const renameCurrent = useCallback((previousId: string, nextId: string) => {
+    if (currentIdRef.current !== previousId) {
+      return
+    }
+    const entry: HistoryEntry = {
+      witPageId: nextId,
+      anchor: captureAnchorRef.current() ?? undefined,
+    }
+    currentIdRef.current = nextId
+    pagesAtNavRef.current = pagesRef.current
+    window.history.replaceState(entry, '', urlForPage(nextId))
+    writeLastLocation(entry)
+    setLocation((prev) => ({ ...prev, pageId: nextId }))
+  }, [])
 
   /** Persist the latest scroll position of `pageId` (debounced by the caller). */
   const recordAnchor = useCallback(
@@ -229,6 +237,7 @@ export function usePageNavigation({ pages, pagesReady, canLeave, captureAnchor }
   return {
     pageId: location.pageId,
     scrollTarget: location.target,
+    editorSession: location.session,
     navigate,
     renameCurrent,
     recordAnchor,
