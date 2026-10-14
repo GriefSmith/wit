@@ -173,6 +173,31 @@ export default function App() {
     editorHeader.dirty &&
     !editorHeader.loadError;
 
+  /**
+   * Shift+Cmd+Enter (Shift+Ctrl+Enter off macOS) saves. Capture phase so the
+   * chord never reaches the editor as a line break.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        e.key !== "Enter" ||
+        !e.shiftKey ||
+        !(e.metaKey || e.ctrlKey) ||
+        e.altKey ||
+        e.isComposing
+      ) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      if (canSave && !e.repeat) {
+        void editorRef.current?.save();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [canSave]);
+
   const canReloadFromMarkdown =
     Boolean(resolvedSelectedId) &&
     !editorHeader.loading &&
@@ -337,6 +362,7 @@ export default function App() {
             <button
               type="button"
               disabled={!canSave}
+              title="Save (Shift+Cmd+Enter)"
               onClick={() => void editorRef.current?.save()}
             >
               {editorHeader.saving ? "Saving…" : "Save"}

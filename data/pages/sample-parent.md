@@ -33,7 +33,7 @@ The `id` field is the slug: lowercase letters, numbers, and hyphens only. It is 
 
 ## Creating and editing pages
 
-Use the sidebar to create pages, nest them under a parent, drag to reorder, or rename them. The rich editor auto-saves to markdown when you hit **Save** (or `Ctrl/Cmd+S`).
+Use the sidebar to create pages, nest them under a parent, drag to reorder, or rename them. The rich editor writes back to markdown when you hit **Save** (or `Shift+Cmd+Enter`; `Shift+Ctrl+Enter` on Windows/Linux).
 
 You can also create pages directly by dropping a `.md` file into `data/pages/` with a valid front-matter block — the app will pick it up on the next refresh.
 
@@ -51,7 +51,7 @@ The editor renders these as clickable page-link blocks. In raw markdown they are
 
 | Key | Action |
 |-----|--------|
-| `Ctrl/Cmd + S` | Save current page |
+| `Shift + Cmd/Ctrl + Enter` | Save current page |
 | `/` in editor | Open block menu |
 | `[[` in editor | Insert page link |
 
