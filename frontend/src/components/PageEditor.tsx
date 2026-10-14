@@ -14,15 +14,32 @@ import type { PointerEvent } from 'react'
 import { deletePageOverlay, fetchPage, putPageContent } from '../api'
 import { extractStructuralOverlay, parseStoredPageBody } from '../lib/blocknotePersistence'
 import { isWitPageHref, witHrefToPageId } from '../lib/internalLinks'
+import { captureScrollAnchor, holdScrollPosition } from '../lib/scrollAnchor'
+import type { ScrollAnchor, ScrollTarget } from '../lib/scrollAnchor'
 import { witBlockNoteSchema } from '../lib/witBlockNoteSchema'
 import type { PageMeta } from '../types'
 
 import { PageNavButtons } from './PageNavButtons'
 import { witEditorSideMenu } from './WitEditorSideMenu'
 
+/** Scroll writes are batched; Safari throttles frequent `history.replaceState`. */
+const SCROLL_RECORD_DEBOUNCE_MS = 250
+
+type WitEditor = (typeof witBlockNoteSchema)['BlockNoteEditor']
+
+/** `editor.domElement` throws while unmounted (tiptap view proxy). */
+function mountedEditorElement(editor: WitEditor): HTMLElement | null {
+  try {
+    return editor.domElement ?? null
+  } catch {
+    return null
+  }
+}
+
 export type PageEditorHandle = {
   save: () => Promise<void>
   reloadFromMarkdown: () => Promise<void>
+  captureScrollAnchor: () => ScrollAnchor | null
 }
 
 export type PageEditorHeaderState = {
@@ -42,10 +59,21 @@ type Props = {
   onHeaderStateChange?: (state: PageEditorHeaderState) => void
   /** Must match app theme so the editor face is not stuck on OS light/dark. */
   colorScheme: 'light' | 'dark'
+  /** Where to scroll once the page is loaded (or immediately, if already loaded); null = top. */
+  scrollTarget: ScrollTarget | null
+  onScrollAnchorChange?: (pageId: string, anchor: ScrollAnchor) => void
 }
 
 export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEditor(
-  { pageId, pages, onNavigateToPage, onHeaderStateChange, colorScheme },
+  {
+    pageId,
+    pages,
+    onNavigateToPage,
+    onHeaderStateChange,
+    colorScheme,
+    scrollTarget,
+    onScrollAnchorChange,
+  },
   ref,
 ) {
   const editor = useCreateBlockNote({ schema: witBlockNoteSchema }, [pageId])
@@ -57,8 +85,11 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
   const [witLinkNotice, setWitLinkNotice] = useState<string | null>(null)
   const [overlayStale, setOverlayStale] = useState(false)
   const [overlayNoticeDismissed, setOverlayNoticeDismissed] = useState(false)
-  const surfaceRef = useRef<HTMLDivElement>(null)
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null)
+  const scrollTargetRef = useRef(scrollTarget)
+  /** Page whose content is currently in the editor; null while loading. */
+  const loadedPageIdRef = useRef<string | null>(null)
+  const releaseHoldRef = useRef<(() => void) | null>(null)
 
   const pageIdSet = useMemo(() => new Set(pages.map((p) => p.id)), [pages])
 
@@ -127,7 +158,31 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     [editor],
   )
 
+  const scrollTo = useCallback(
+    (target: ScrollTarget | null) => {
+      releaseHoldRef.current?.()
+      const root = mountedEditorElement(editor)
+      if (!root) {
+        return
+      }
+      releaseHoldRef.current = holdScrollPosition(root, target, () => {
+        releaseHoldRef.current = null
+      })
+    },
+    [editor],
+  )
+
+  useEffect(() => () => releaseHoldRef.current?.(), [editor])
+
   useEffect(() => {
+    scrollTargetRef.current = scrollTarget
+    if (loadedPageIdRef.current === pageId) {
+      scrollTo(scrollTarget)
+    }
+  }, [scrollTarget, pageId, scrollTo])
+
+  useEffect(() => {
+    loadedPageIdRef.current = null
     if (!pageId) {
       setLoadError(null)
       setDirty(false)
@@ -149,6 +204,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
           return
         }
         applyFetchedDoc(doc)
+        loadedPageIdRef.current = pageId
+        scrollTo(scrollTargetRef.current)
       })
       .catch((e: unknown) => {
         if (!cancelled) {
@@ -166,7 +223,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     return () => {
       cancelled = true
     }
-  }, [pageId, editor, applyFetchedDoc])
+  }, [pageId, editor, applyFetchedDoc, scrollTo])
 
   const save = useCallback(async () => {
     if (!pageId) {
@@ -206,6 +263,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
       }
       setSaveError(null)
       setLoading(true)
+      const root = mountedEditorElement(editor)
+      const anchor = root ? captureScrollAnchor(root) : null
       try {
         await deletePageOverlay(pageId)
         const doc = await fetchPage(pageId)
@@ -214,6 +273,8 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
           editor_overlay: null,
           overlay_stale: false,
         })
+        // Block ids are rebuilt here, so this usually lands via the raw `top` fallback.
+        scrollTo(anchor)
         await putPageContent(pageId, {
           editor_overlay: extractStructuralOverlay(editor.document),
         })
@@ -225,7 +286,7 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
         setLoading(false)
       }
     },
-    [applyFetchedDoc, dirty, editor, pageId],
+    [applyFetchedDoc, dirty, editor, pageId, scrollTo],
   )
 
   useImperativeHandle(
@@ -233,8 +294,15 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     () => ({
       save,
       reloadFromMarkdown,
+      captureScrollAnchor: () => {
+        if (!pageId || loadedPageIdRef.current !== pageId) {
+          return null
+        }
+        const root = mountedEditorElement(editor)
+        return root ? captureScrollAnchor(root) : null
+      },
     }),
-    [save, reloadFromMarkdown],
+    [save, reloadFromMarkdown, pageId, editor],
   )
 
   useEffect(() => {
@@ -258,26 +326,37 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
     overlayStale,
   ])
 
-  const bindScrollRoot = useCallback(() => {
-    const el = surfaceRef.current?.querySelector<HTMLElement>('.bn-editor')
-    setScrollRoot(el ?? null)
-  }, [])
+  /** The ProseMirror root (`.bn-editor`) is the scroll container, see `.wit-editor-surface` CSS. */
+  useEffect(() => {
+    setScrollRoot(mountedEditorElement(editor))
+    const offMount = editor.onMount(() => setScrollRoot(mountedEditorElement(editor)))
+    const offUnmount = editor.onUnmount(() => setScrollRoot(null))
+    return () => {
+      offMount()
+      offUnmount()
+    }
+  }, [editor])
 
   useEffect(() => {
-    bindScrollRoot()
-    const surface = surfaceRef.current
-    if (!surface) {
+    if (!scrollRoot || !pageId || !onScrollAnchorChange) {
       return
     }
-    const mo = new MutationObserver(bindScrollRoot)
-    mo.observe(surface, { childList: true, subtree: true })
-    return () => mo.disconnect()
-  }, [bindScrollRoot, pageId, loading])
-
-  useEffect(() => {
-    const el = surfaceRef.current?.querySelector<HTMLElement>('.bn-editor')
-    el?.scrollTo({ top: 0 })
-  }, [pageId])
+    let timer: number | undefined
+    const onScroll = () => {
+      if (releaseHoldRef.current || loadedPageIdRef.current !== pageId) {
+        return
+      }
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        onScrollAnchorChange(pageId, captureScrollAnchor(scrollRoot))
+      }, SCROLL_RECORD_DEBOUNCE_MS)
+    }
+    scrollRoot.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.clearTimeout(timer)
+      scrollRoot.removeEventListener('scroll', onScroll)
+    }
+  }, [scrollRoot, pageId, onScrollAnchorChange])
 
   if (!pageId) {
     return <p className="wit-placeholder">Select a page from the tree.</p>
@@ -293,7 +372,6 @@ export const PageEditor = forwardRef<PageEditorHandle, Props>(function PageEdito
 
   return (
     <div
-      ref={surfaceRef}
       className="wit-editor-surface"
       onPointerDownCapture={handleEditorPointerDown}
     >

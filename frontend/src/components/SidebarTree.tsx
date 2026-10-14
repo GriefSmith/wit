@@ -129,7 +129,8 @@ function RenamePageForm({ meta, onCancel, onSave }: RenameFormProps) {
 type Props = {
   pages: PageMeta[]
   selectedId: string | null
-  onSelect: (id: string) => void
+  /** Return false when navigation was refused so the tree can restore its selection. */
+  onSelect: (id: string) => boolean | void
   onStructureChange: () => void | Promise<void>
   onPageCreated?: (id: string) => void
   /** Called when a page id changes (slug rename); previous selection should update. */
@@ -148,6 +149,7 @@ export function SidebarTree({
   onPageDeleted,
 }: Props) {
   const data = useMemo(() => flatToTree(pages), [pages])
+  const treeRef = useRef<TreeApi<PageTreeNode> | undefined>(undefined)
   const treeViewportRef = useRef<HTMLDivElement>(null)
   const [treeViewportH, setTreeViewportH] = useState(320)
   const [createError, setCreateError] = useState<string | null>(null)
@@ -217,10 +219,11 @@ export function SidebarTree({
   const saveRename = useCallback(
     async (pageId: string, patch: { title?: string; new_id?: string }) => {
       const { id: nextId } = await patchPageMeta(pageId, patch)
-      await Promise.resolve(onStructureChange())
+      // Before the refresh: a list without the old id must not look like a deleted page.
       if (nextId !== pageId) {
         onPageRenamed?.(pageId, nextId)
       }
+      await Promise.resolve(onStructureChange())
       setRenameForId(null)
     },
     [onStructureChange, onPageRenamed],
@@ -447,31 +450,38 @@ export function SidebarTree({
         </p>
       ) : null}
       <div className="wit-tree-viewport" ref={treeViewportRef}>
-        <Tree<PageTreeNode>
-          data={data}
-          width="100%"
-          height={treeViewportH}
-          selection={selectedId ?? undefined}
-          openByDefault
-          onSelect={(nodes) => {
-            const id = nodes[0]?.id
-            if (id) {
-              onSelect(id)
-            }
-          }}
-          onMove={async ({ dragIds, parentId, index }) => {
-            const patches = computeMovePatches(pages, dragIds, parentId, index)
-            if (patches === null) {
-              throw new Error('Cannot move a page under its own descendant.')
-            }
-            for (const { id, parent, order } of patches) {
-              await patchPageMeta(id, { parent, order })
-            }
-            onStructureChange()
-          }}
-        >
-          {Row}
-        </Tree>
+        {/* Mount with data: arborist only scrolls to `selection` when that prop changes. */}
+        {data.length > 0 ? (
+          <Tree<PageTreeNode>
+            ref={treeRef}
+            data={data}
+            width="100%"
+            height={treeViewportH}
+            selection={selectedId ?? undefined}
+            openByDefault
+            onSelect={(nodes) => {
+              const id = nodes[0]?.id
+              if (!id || id === selectedId) {
+                return
+              }
+              if (onSelect(id) === false && selectedId) {
+                queueMicrotask(() => treeRef.current?.select(selectedId, { focus: false }))
+              }
+            }}
+            onMove={async ({ dragIds, parentId, index }) => {
+              const patches = computeMovePatches(pages, dragIds, parentId, index)
+              if (patches === null) {
+                throw new Error('Cannot move a page under its own descendant.')
+              }
+              for (const { id, parent, order } of patches) {
+                await patchPageMeta(id, { parent, order })
+              }
+              onStructureChange()
+            }}
+          >
+            {Row}
+          </Tree>
+        ) : null}
       </div>
     </div>
   )

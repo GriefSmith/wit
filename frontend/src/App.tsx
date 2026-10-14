@@ -15,6 +15,7 @@ import { SidebarTree } from "./components/SidebarTree";
 import { WitCollapsedPinControl } from "./components/WitCollapsedPinControl";
 import { WitSettingsMenu } from "./components/WitSettingsMenu";
 import { useWitPins } from "./context/WitPinsContext";
+import { usePageNavigation } from "./hooks/usePageNavigation";
 import { usePages } from "./hooks/usePages";
 import {
   ACCENT_STORAGE_KEY,
@@ -120,7 +121,6 @@ function sidebarWidthMax(): number {
 export default function App() {
   const { data, error, loading, refresh } = usePages();
   const witPins = useWitPins();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [previewPin, setPreviewPin] = useState<WitPin | null>(null);
   const [accent, setAccent] = useState<AccentName>(() => readStoredAccent());
   const [fontPreset, setFontPreset] = useState<FontPresetName>(() =>
@@ -141,7 +141,58 @@ export default function App() {
 
   const pages = useMemo(() => data?.pages ?? [], [data]);
 
-  const resolvedSelectedId = selectedId ?? pages[0]?.id ?? null;
+  const editorRef = useRef<PageEditorHandle | null>(null);
+  const [editorHeader, setEditorHeader] = useState<PageEditorHeaderState>({
+    loading: false,
+    saving: false,
+    dirty: false,
+    loadError: null,
+    saveError: null,
+    witLinkNotice: null,
+    overlayStale: false,
+  });
+
+  const canLeavePage = useCallback(
+    () =>
+      !editorHeader.dirty ||
+      window.confirm("This page has unsaved changes. Leave without saving?"),
+    [editorHeader.dirty],
+  );
+
+  const captureEditorAnchor = useCallback(
+    () => editorRef.current?.captureScrollAnchor() ?? null,
+    [],
+  );
+
+  const {
+    pageId: resolvedSelectedId,
+    scrollTarget,
+    navigate,
+    renameCurrent,
+    recordAnchor,
+  } = usePageNavigation({
+    pages,
+    pagesReady: data !== null,
+    canLeave: canLeavePage,
+    captureAnchor: captureEditorAnchor,
+  });
+
+  /** Refresh / tab close would silently drop unsaved edits otherwise. */
+  useEffect(() => {
+    if (!editorHeader.dirty) {
+      return;
+    }
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [editorHeader.dirty]);
+
+  const selectedTitle = pages.find((p) => p.id === resolvedSelectedId)?.title;
+  useEffect(() => {
+    document.title = selectedTitle ? `${selectedTitle} · wit` : "wit";
+  }, [selectedTitle]);
 
   const collapsedRouteLabel = useMemo(() => {
     if (sidebarOpen || !resolvedSelectedId) {
@@ -154,17 +205,6 @@ export default function App() {
   const dup = data?.duplicate_warnings ?? [];
 
   const handleStructureChange = useCallback(() => refresh(), [refresh]);
-
-  const editorRef = useRef<PageEditorHandle | null>(null);
-  const [editorHeader, setEditorHeader] = useState<PageEditorHeaderState>({
-    loading: false,
-    saving: false,
-    dirty: false,
-    loadError: null,
-    saveError: null,
-    witLinkNotice: null,
-    overlayStale: false,
-  });
 
   const canSave =
     Boolean(resolvedSelectedId) &&
@@ -207,15 +247,15 @@ export default function App() {
   const handlePageRenamed = useCallback(
     (previousId: string, nextId: string) => {
       witPins.onPageRenamed(previousId, nextId);
-      setSelectedId((cur) => (cur === previousId ? nextId : cur));
+      renameCurrent(previousId, nextId);
     },
-    [witPins],
+    [witPins, renameCurrent],
   );
 
+  /** The navigation hook moves off the deleted page once the refreshed list arrives. */
   const handlePageDeleted = useCallback(
     (deletedId: string) => {
       witPins.onPageDeleted(deletedId);
-      setSelectedId((cur) => (cur === deletedId ? null : cur));
     },
     [witPins],
   );
@@ -355,7 +395,7 @@ export default function App() {
           <h1>wit</h1>
         </div>
 
-        <PageSearch pages={pages} onSelect={setSelectedId} />
+        <PageSearch pages={pages} onSelect={navigate} />
 
         <div className="wit-app-header-right">
           <div className="wit-app-header-save">
@@ -461,9 +501,9 @@ export default function App() {
                 <SidebarTree
                   pages={pages}
                   selectedId={resolvedSelectedId}
-                  onSelect={setSelectedId}
+                  onSelect={navigate}
                   onStructureChange={handleStructureChange}
-                  onPageCreated={setSelectedId}
+                  onPageCreated={navigate}
                   onPageRenamed={handlePageRenamed}
                   onPageDeleted={handlePageDeleted}
                 />
@@ -540,8 +580,10 @@ export default function App() {
                 pageId={resolvedSelectedId}
                 pages={pages}
                 colorScheme={colorScheme}
-                onNavigateToPage={(id) => setSelectedId(id)}
+                onNavigateToPage={navigate}
                 onHeaderStateChange={setEditorHeader}
+                scrollTarget={scrollTarget}
+                onScrollAnchorChange={recordAnchor}
               />
             </div>
           </main>
