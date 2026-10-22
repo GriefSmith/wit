@@ -9,6 +9,17 @@ Create, visualize and edit your pages in localhost using a rich block-style edit
 - Node ^20.19.0 or >=22.12.0 (frontend; required by Vite 8)
 - [uv](https://docs.astral.sh/uv/) — `make install` and `make install-backend` call it to build `.venv`, so the Make setup does not work without uv. Pip can install `./backend` into a venv you create yourself (see [RUNBOOK.md](RUNBOOK.md#manual-setup-without-make)).
 
+## Quick start
+
+From the repo root:
+
+```bash
+make install   # backend venv + frontend npm deps
+make dev       # backend on :8000, frontend on :5173
+```
+
+Open `http://localhost:5173` in your browser. The Vite dev server proxies `/pages`, `/health`, and `/config` to the backend automatically.
+
 ## Configuration
 
 Settings are the variables listed below. Copy to your `.env` file from [`.env.example`](.env.example) at the repo root and edit there, then start or reload `make dev`.
@@ -25,17 +36,6 @@ Example `.env`:
 ```bash
 WIT_PAGES_ROOT=/Users/you/Documents/notes
 ```
-
-## Quick start
-
-From the repo root:
-
-```bash
-make install   # backend venv + frontend npm deps
-make dev       # backend on :8000, frontend on :5173
-```
-
-Open `http://localhost:5173` in your browser. The Vite dev server proxies `/pages`, `/health`, and `/config` to the backend automatically.
 
 ## More docs
 
