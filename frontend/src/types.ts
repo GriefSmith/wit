@@ -1,3 +1,5 @@
+import type { PageStyle } from './lib/pageStyle'
+
 export type PageMeta = {
   id: string
   title: string
@@ -6,6 +8,9 @@ export type PageMeta = {
   order: number
   tags: string[]
   created: string | null
+  style: PageStyle | null
+  version: string | null
+  authors: string[] | null
 }
 
 export type DuplicateWarning = {

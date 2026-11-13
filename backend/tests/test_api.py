@@ -295,3 +295,143 @@ def test_put_overlay_only_leaves_markdown_untouched(
 def test_put_requires_a_field(client: TestClient) -> None:
     r = client.put("/pages/b", json={})
     assert r.status_code == 400
+
+
+def test_list_returns_cleaned_style(client: TestClient, tmp_path: Path) -> None:
+    (tmp_path / "a.md").write_text(
+        """---
+id: "a"
+title: "Alpha"
+parent: ""
+tags: ["x"]
+created: "2026-01-01"
+version: "2"
+authors:
+  - "Ada"
+  - ""
+  - 3
+  - "Lin"
+style:
+  typeface: literary
+  measure: book
+  opener: auto
+  scene_break: ornament
+---
+Hello
+""",
+        encoding="utf-8",
+    )
+    page = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "a")
+    assert page["style"] == {
+        "measure": "book",
+        "scene_break": "ornament",
+    }
+    assert page["version"] == "2"
+    assert page["authors"] == ["Ada", "Lin"]
+    child = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "b")
+    assert child["style"] is None
+    assert child["version"] is None
+    assert child["authors"] is None
+
+
+def test_list_cleans_version_and_authors(client: TestClient, tmp_path: Path) -> None:
+    (tmp_path / "a.md").write_text(
+        """---
+id: "a"
+title: "Alpha"
+parent: ""
+version: 2
+authors: "Ada"
+style:
+  opener: title
+---
+Hello
+""",
+        encoding="utf-8",
+    )
+    page = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "a")
+    assert page["version"] is None
+    assert page["authors"] is None
+    assert page["style"] == {"opener": "title"}
+
+
+def test_create_page_omits_style_version_and_authors(
+    client: TestClient, tmp_path: Path
+) -> None:
+    created = client.post("/pages", json={"title": "Gamma"}).json()
+    text = (tmp_path / f"{created['id']}.md").read_text(encoding="utf-8")
+    assert "style:" not in text
+    assert "version:" not in text
+    assert "authors:" not in text
+
+
+def test_list_drops_bad_style_fields(client: TestClient, tmp_path: Path) -> None:
+    (tmp_path / "a.md").write_text(
+        """---
+id: "a"
+title: "Alpha"
+parent: ""
+style:
+  measure: wide
+  scene_break: nope
+  plain: plain
+---
+Hello
+""",
+        encoding="utf-8",
+    )
+    page = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "a")
+    assert page["style"] == {"measure": "wide"}
+
+
+def test_list_ignores_non_mapping_style(client: TestClient, tmp_path: Path) -> None:
+    (tmp_path / "a.md").write_text(
+        """---
+id: "a"
+title: "Alpha"
+parent: ""
+style: literary
+---
+Hello
+""",
+        encoding="utf-8",
+    )
+    page = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "a")
+    assert page["style"] is None
+
+
+def test_body_save_and_meta_patch_leave_style_on_disk(
+    client: TestClient, tmp_path: Path
+) -> None:
+    (tmp_path / "b.md").write_text(
+        """---
+id: "b"
+title: "Beta"
+version: " draft "
+authors:
+  - "Ada"
+parent: "a"
+style:
+  measure: wide
+  typeface: blog
+  scene_break: nope
+---
+World
+""",
+        encoding="utf-8",
+    )
+    assert client.put("/pages/b", json={"markdown_body": "Updated\n"}).status_code == 200
+    assert client.patch("/pages/b/meta", json={"order": 4}).status_code == 200
+    text = (tmp_path / "b.md").read_text(encoding="utf-8")
+    assert "measure: wide" in text or 'measure: "wide"' in text
+    assert "typeface: blog" in text or 'typeface: "blog"' in text
+    assert "nope" in text
+    detail = client.get("/pages/b").json()
+    assert detail["frontmatter"]["style"]["scene_break"] == "nope"
+    listed = next(p for p in client.get("/pages").json()["pages"] if p["id"] == "b")
+    assert listed["style"] == {"measure": "wide"}
+    assert detail["frontmatter"]["version"] == " draft "
+    assert detail["frontmatter"]["authors"] == ["Ada"]
+    assert "draft" in text
+    assert listed["version"] == "draft"
+    assert listed["authors"] == ["Ada"]

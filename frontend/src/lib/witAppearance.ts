@@ -10,8 +10,8 @@ export const ACCENT_OPTIONS = [
 ] as const;
 export type AccentName = (typeof ACCENT_OPTIONS)[number];
 
-export const FONT_PRESET_STORAGE_KEY = "wit-font-preset";
-export const TEXT_SIZE_STORAGE_KEY = "wit-text-size";
+export const TYPEFACE_STORAGE_KEY = "wit-typeface";
+export const SIZE_BUMP_STORAGE_KEY = "wit-size-bump";
 
 /** User-selected background palette (independent of OS light/dark). */
 export const BG_THEME_STORAGE_KEY = "wit-bg-theme";
@@ -46,20 +46,30 @@ export const BG_THEME_MENU_OPTIONS: { value: BgThemeName; label: string }[] = [
 
 /** @deprecated Legacy keys — read only for migration into `wit-bg-theme`. */
 const LEGACY_THEME_STORAGE_KEY = "wit-theme";
+/** @deprecated Read only for migration into `wit-typeface`. */
+const LEGACY_FONT_PRESET_STORAGE_KEY = "wit-font-preset";
+/** @deprecated Read only for migration into `wit-size-bump`. */
+const LEGACY_TEXT_SIZE_STORAGE_KEY = "wit-text-size";
+const LEGACY_TEXT_SIZE_VALUES: Record<string, SizeBumpName> = {
+  default: "none",
+  large: "x1.15",
+  granny: "x1.3",
+};
 
-export type FontPresetName = "default" | "literary" | "document" | "plain";
-export type TextSizeName = "default" | "large" | "granny";
+export type TypefaceName = "default" | "literary" | "document" | "blog";
+export type SizeBumpName = "none" | "x1.15" | "x1.3" | "x1.5";
 
-const FONT_PRESET_VALUES: readonly FontPresetName[] = [
+const TYPEFACE_VALUES: readonly TypefaceName[] = [
   "default",
   "literary",
   "document",
-  "plain",
+  "blog",
 ];
-const TEXT_SIZE_VALUES: readonly TextSizeName[] = [
-  "default",
-  "large",
-  "granny",
+const SIZE_BUMP_VALUES: readonly SizeBumpName[] = [
+  "none",
+  "x1.15",
+  "x1.3",
+  "x1.5",
 ];
 const BG_THEME_VALUES: readonly BgThemeName[] = [
   "default",
@@ -70,12 +80,12 @@ export function isAccentName(value: string): value is AccentName {
   return (ACCENT_OPTIONS as readonly string[]).includes(value);
 }
 
-export function isFontPresetName(value: string): value is FontPresetName {
-  return (FONT_PRESET_VALUES as readonly string[]).includes(value);
+export function isTypefaceName(value: string): value is TypefaceName {
+  return (TYPEFACE_VALUES as readonly string[]).includes(value);
 }
 
-export function isTextSizeName(value: string): value is TextSizeName {
-  return (TEXT_SIZE_VALUES as readonly string[]).includes(value);
+export function isSizeBumpName(value: string): value is SizeBumpName {
+  return (SIZE_BUMP_VALUES as readonly string[]).includes(value);
 }
 
 export function isBgThemeName(value: string): value is BgThemeName {
@@ -117,20 +127,27 @@ export function readStoredAccent(): AccentName {
   return raw && isAccentName(raw) ? raw : "default";
 }
 
-export function readStoredFontPreset(): FontPresetName {
+export function readStoredTypeface(): TypefaceName {
   if (typeof window === "undefined") {
     return "default";
   }
-  const raw = window.localStorage.getItem(FONT_PRESET_STORAGE_KEY);
-  return raw && isFontPresetName(raw) ? raw : "default";
+  const raw =
+    window.localStorage.getItem(TYPEFACE_STORAGE_KEY) ??
+    window.localStorage.getItem(LEGACY_FONT_PRESET_STORAGE_KEY);
+  // Retired `plain` used the face Default now uses.
+  return raw && isTypefaceName(raw) ? raw : "default";
 }
 
-export function readStoredTextSize(): TextSizeName {
+export function readStoredSizeBump(): SizeBumpName {
   if (typeof window === "undefined") {
-    return "default";
+    return "none";
   }
-  const raw = window.localStorage.getItem(TEXT_SIZE_STORAGE_KEY);
-  return raw && isTextSizeName(raw) ? raw : "default";
+  const raw = window.localStorage.getItem(SIZE_BUMP_STORAGE_KEY);
+  if (raw && isSizeBumpName(raw)) {
+    return raw;
+  }
+  const legacy = window.localStorage.getItem(LEGACY_TEXT_SIZE_STORAGE_KEY);
+  return (legacy && LEGACY_TEXT_SIZE_VALUES[legacy]) || "none";
 }
 
 export function readStoredBgTheme(): BgThemeName {

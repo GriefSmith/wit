@@ -20,22 +20,23 @@ import { usePages } from "./hooks/usePages";
 import {
   ACCENT_STORAGE_KEY,
   BG_THEME_STORAGE_KEY,
-  FONT_PRESET_STORAGE_KEY,
-  TEXT_SIZE_STORAGE_KEY,
+  SIZE_BUMP_STORAGE_KEY,
+  TYPEFACE_STORAGE_KEY,
   getSystemColorScheme,
   readStoredAccent,
   readStoredBgTheme,
-  readStoredFontPreset,
-  readStoredTextSize,
+  readStoredSizeBump,
+  readStoredTypeface,
   resolveEffectiveColorScheme,
   subscribeSystemColorScheme,
 } from "./lib/witAppearance";
 import type {
   AccentName,
   BgThemeName,
-  FontPresetName,
-  TextSizeName,
+  SizeBumpName,
+  TypefaceName,
 } from "./lib/witAppearance";
+import { resolvePageStyle } from "./lib/pageStyle";
 import { formatPageRouteCrumb, pageTitleTrail } from "./lib/tree";
 import type { WitPin } from "./types";
 import type {
@@ -123,11 +124,11 @@ export default function App() {
   const witPins = useWitPins();
   const [previewPin, setPreviewPin] = useState<WitPin | null>(null);
   const [accent, setAccent] = useState<AccentName>(() => readStoredAccent());
-  const [fontPreset, setFontPreset] = useState<FontPresetName>(() =>
-    readStoredFontPreset(),
+  const [typeface, setTypeface] = useState<TypefaceName>(() =>
+    readStoredTypeface(),
   );
-  const [textSize, setTextSize] = useState<TextSizeName>(() =>
-    readStoredTextSize(),
+  const [sizeBump, setSizeBump] = useState<SizeBumpName>(() =>
+    readStoredSizeBump(),
   );
   const [bgTheme, setBgTheme] = useState<BgThemeName>(() => readStoredBgTheme());
   const systemColorScheme = useSyncExternalStore(
@@ -150,6 +151,7 @@ export default function App() {
     saveError: null,
     witLinkNotice: null,
     overlayStale: false,
+    titleHeadingInView: false,
   });
 
   const canLeavePage = useCallback(
@@ -177,6 +179,13 @@ export default function App() {
     canLeave: canLeavePage,
     captureAnchor: captureEditorAnchor,
   });
+
+  const sheet = useMemo(() => {
+    if (!data || !resolvedSelectedId) {
+      return null;
+    }
+    return resolvePageStyle(resolvedSelectedId, data.pages);
+  }, [data, resolvedSelectedId]);
 
   /** Refresh / tab close would silently drop unsaved edits otherwise. */
   useEffect(() => {
@@ -296,26 +305,26 @@ export default function App() {
       return;
     }
     const root = document.documentElement;
-    if (fontPreset === "default") {
-      root.removeAttribute("data-font-preset");
+    if (typeface === "default") {
+      root.removeAttribute("data-typeface");
     } else {
-      root.setAttribute("data-font-preset", fontPreset);
+      root.setAttribute("data-typeface", typeface);
     }
-    window.localStorage.setItem(FONT_PRESET_STORAGE_KEY, fontPreset);
-  }, [fontPreset]);
+    window.localStorage.setItem(TYPEFACE_STORAGE_KEY, typeface);
+  }, [typeface]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
       return;
     }
     const root = document.documentElement;
-    if (textSize === "default") {
-      root.removeAttribute("data-text-size");
+    if (sizeBump === "none") {
+      root.removeAttribute("data-size-bump");
     } else {
-      root.setAttribute("data-text-size", textSize);
+      root.setAttribute("data-size-bump", sizeBump);
     }
-    window.localStorage.setItem(TEXT_SIZE_STORAGE_KEY, textSize);
-  }, [textSize]);
+    window.localStorage.setItem(SIZE_BUMP_STORAGE_KEY, sizeBump);
+  }, [sizeBump]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -451,10 +460,10 @@ export default function App() {
           <WitSettingsMenu
             accent={accent}
             onAccentChange={setAccent}
-            fontPreset={fontPreset}
-            onFontPresetChange={setFontPreset}
-            textSize={textSize}
-            onTextSizeChange={setTextSize}
+            typeface={typeface}
+            onTypefaceChange={setTypeface}
+            sizeBump={sizeBump}
+            onSizeBumpChange={setSizeBump}
             bgTheme={bgTheme}
             onBgThemeChange={setBgTheme}
           />
@@ -580,7 +589,9 @@ export default function App() {
               />
             </div>
             <div className="wit-main-body">
-              {!sidebarOpen && collapsedRouteLabel ? (
+              {!sidebarOpen &&
+              collapsedRouteLabel &&
+              !editorHeader.titleHeadingInView ? (
                 <nav
                   className="wit-main-route-context"
                   aria-label="Current page in outline"
@@ -593,6 +604,7 @@ export default function App() {
                 pageId={resolvedSelectedId}
                 editorSession={editorSession}
                 pages={pages}
+                sheet={sheet}
                 colorScheme={colorScheme}
                 onNavigateToPage={navigate}
                 onHeaderStateChange={setEditorHeader}

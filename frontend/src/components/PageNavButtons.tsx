@@ -9,7 +9,7 @@ type Props = {
   pageId: string
   pages: PageMeta[]
   scrollRoot: HTMLElement | null
-  onNavigate: (pageId: string) => void
+  onNavigate: (pageId: string, direction: 'next' | 'previous') => void
 }
 
 export function PageNavButtons({ pageId, pages, scrollRoot, onNavigate }: Props) {
@@ -51,13 +51,13 @@ export function PageNavButtons({ pageId, pages, scrollRoot, onNavigate }: Props)
 
   const goPrev = () => {
     if (prevId) {
-      onNavigate(prevId)
+      onNavigate(prevId, 'previous')
     }
   }
 
   const goNext = () => {
     if (nextId) {
-      onNavigate(nextId)
+      onNavigate(nextId, 'next')
     }
   }
 

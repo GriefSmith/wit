@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import type { PointerEvent, Ref } from "react";
+import { createPortal } from "react-dom";
 
 import { deletePageOverlay, fetchPage, putPageContent } from "../api";
 import {
@@ -18,6 +19,8 @@ import {
   parseStoredPageBody,
 } from "../lib/blocknotePersistence";
 import { isWitPageHref, witHrefToPageId } from "../lib/internalLinks";
+import { chapterEntrance } from "../lib/pageStyle";
+import type { ChapterDirection, ResolvedStyle } from "../lib/pageStyle";
 import { captureScrollAnchor, holdScrollPosition } from "../lib/scrollAnchor";
 import type { ScrollAnchor, ScrollTarget } from "../lib/scrollAnchor";
 import { witBlockNoteSchema } from "../lib/witBlockNoteSchema";
@@ -29,6 +32,13 @@ import { witEditorSideMenu } from "./WitEditorSideMenu";
 /** Scroll writes are batched; Safari throttles frequent `history.replaceState`. */
 const SCROLL_RECORD_DEBOUNCE_MS = 250;
 
+/** `scrollTo` clamps, so this holds the bottom while layout settles. */
+const BOTTOM_TARGET: ScrollTarget = {
+  blockId: null,
+  offset: 0,
+  top: Number.MAX_SAFE_INTEGER,
+};
+
 type WitEditor = (typeof witBlockNoteSchema)["BlockNoteEditor"];
 
 /** `editor.domElement` throws while unmounted (tiptap view proxy). */
@@ -38,6 +48,11 @@ function mountedEditorElement(editor: WitEditor): HTMLElement | null {
   } catch {
     return null;
   }
+}
+
+function openerHostElement(editor: WitEditor): HTMLElement | null {
+  const host = mountedEditorElement(editor)?.closest(".bn-root");
+  return host instanceof HTMLElement ? host : null;
 }
 
 export type PageEditorHandle = {
@@ -54,6 +69,7 @@ export type PageEditorHeaderState = {
   saveError: string | null;
   witLinkNotice: string | null;
   overlayStale: boolean;
+  titleHeadingInView: boolean;
 };
 
 type Props = {
@@ -63,7 +79,8 @@ type Props = {
   /** A new value opens a fresh editor; a `pageId` change alone (rename) keeps the current one. */
   editorSession: number;
   pages: PageMeta[];
-  onNavigateToPage: (pageId: string) => void;
+  sheet: ResolvedStyle | null;
+  onNavigateToPage: (pageId: string) => boolean;
   onHeaderStateChange?: (state: PageEditorHeaderState) => void;
   /** Must match app theme so the editor face is not stuck on OS light/dark. */
   colorScheme: "light" | "dark";
@@ -77,6 +94,7 @@ export function PageEditor({
   pageId,
   editorSession,
   pages,
+  sheet,
   onNavigateToPage,
   onHeaderStateChange,
   colorScheme,
@@ -95,6 +113,41 @@ export function PageEditor({
   const [overlayStale, setOverlayStale] = useState(false);
   const [overlayNoticeDismissed, setOverlayNoticeDismissed] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
+  const [openerHost, setOpenerHost] = useState<HTMLElement | null>(null);
+
+  const pageMeta = pages.find((page) => page.id === pageId);
+  const openerTitle = pageMeta?.title.trim() ?? "";
+  const openerVersion = pageMeta?.version?.trim() ?? "";
+  const openerAuthors = (pageMeta?.authors ?? [])
+    .map((name) => name.trim())
+    .filter((name) => name !== "");
+  const openerKind = sheet?.opener ?? null;
+  const showTitleLine =
+    (openerKind === "title" || openerKind === "book") && openerTitle !== "";
+  const showVersion = openerKind === "title" && openerVersion !== "";
+  const showAuthors = openerKind === "title" && openerAuthors.length > 0;
+  const showOpener = showTitleLine || showVersion || showAuthors;
+  const titleHeadingShown = showOpener && openerKind === "title";
+  const [titleHeadingEl, setTitleHeadingEl] = useState<HTMLElement | null>(
+    null,
+  );
+  const [titleHeadingInView, setTitleHeadingInView] = useState(false);
+  const [chapterSlide, setChapterSlide] = useState<
+    "from-left" | "from-right" | null
+  >(null);
+  /** Set only by Previous / Next; consumed by the next `finishLoad`. */
+  const entranceRef = useRef<{
+    pageId: string;
+    direction: ChapterDirection;
+  } | null>(null);
+
+  /** `.bn-editor` scrolls until an opening needs the same scroller. */
+  const scrollElement = useCallback(
+    () =>
+      (showOpener ? openerHostElement(editor) : null) ??
+      mountedEditorElement(editor),
+    [editor, showOpener],
+  );
   /** Editor instance whose page content has finished loading. */
   const loadedEditorRef = useRef<WitEditor | null>(null);
   const releaseHoldRef = useRef<(() => void) | null>(null);
@@ -113,9 +166,20 @@ export function PageEditor({
         return;
       }
       setWitLinkNotice(null);
+      entranceRef.current = null;
       onNavigateToPage(targetId);
     },
     [onNavigateToPage, pageIdSet],
+  );
+
+  const goToNeighbor = useCallback(
+    (id: string, direction: ChapterDirection) => {
+      if (!onNavigateToPage(id)) {
+        return;
+      }
+      entranceRef.current = { pageId: id, direction };
+    },
+    [onNavigateToPage],
   );
 
   const handleEditorPointerDown = useCallback(
@@ -173,7 +237,7 @@ export function PageEditor({
   const scrollTo = useCallback(
     (target: ScrollTarget | null) => {
       releaseHoldRef.current?.();
-      const root = mountedEditorElement(editor);
+      const root = scrollElement();
       if (!root) {
         return;
       }
@@ -181,7 +245,7 @@ export function PageEditor({
         releaseHoldRef.current = null;
       });
     },
-    [editor],
+    [scrollElement],
   );
 
   useEffect(() => () => releaseHoldRef.current?.(), [editor]);
@@ -200,7 +264,17 @@ export function PageEditor({
     (doc: Awaited<ReturnType<typeof fetchPage>>) => {
       applyFetchedDoc(doc);
       loadedEditorRef.current = editor;
-      scrollTo(scrollTarget);
+      const pending = entranceRef.current;
+      entranceRef.current = null;
+      const entrance = chapterEntrance(
+        sheet?.opener ?? null,
+        pending?.pageId === pageId ? pending.direction : null,
+      );
+      scrollTo(entrance.scroll === "bottom" ? BOTTOM_TARGET : scrollTarget);
+      const reduce = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      setChapterSlide(!reduce && entrance.slide ? entrance.slide : null);
     },
   );
 
@@ -286,7 +360,7 @@ export function PageEditor({
       }
       setSaveError(null);
       setLoading(true);
-      const root = mountedEditorElement(editor);
+      const root = scrollElement();
       const anchor = root ? captureScrollAnchor(root) : null;
       try {
         await deletePageOverlay(pageId);
@@ -309,7 +383,7 @@ export function PageEditor({
         setLoading(false);
       }
     },
-    [applyFetchedDoc, dirty, editor, pageId, scrollTo],
+    [applyFetchedDoc, dirty, editor, pageId, scrollElement, scrollTo],
   );
 
   useImperativeHandle(
@@ -321,11 +395,11 @@ export function PageEditor({
         if (!pageId || loadedEditorRef.current !== editor) {
           return null;
         }
-        const root = mountedEditorElement(editor);
+        const root = scrollElement();
         return root ? captureScrollAnchor(root) : null;
       },
     }),
-    [save, reloadFromMarkdown, pageId, editor],
+    [save, reloadFromMarkdown, pageId, editor, scrollElement],
   );
 
   useEffect(() => {
@@ -337,6 +411,7 @@ export function PageEditor({
       saveError,
       witLinkNotice,
       overlayStale,
+      titleHeadingInView,
     });
   }, [
     onHeaderStateChange,
@@ -347,20 +422,52 @@ export function PageEditor({
     saveError,
     witLinkNotice,
     overlayStale,
+    titleHeadingInView,
   ]);
 
-  /** The ProseMirror root (`.bn-editor`) is the scroll container, see `.wit-editor-surface` CSS. */
   useEffect(() => {
-    setScrollRoot(mountedEditorElement(editor));
-    const offMount = editor.onMount(() =>
-      setScrollRoot(mountedEditorElement(editor)),
+    setTitleHeadingInView(titleHeadingShown);
+  }, [titleHeadingShown, pageId]);
+
+  useEffect(() => {
+    if (!titleHeadingShown || !titleHeadingEl || !scrollRoot) {
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setTitleHeadingInView(entry.isIntersecting);
+      },
+      { root: scrollRoot, threshold: 0 },
     );
-    const offUnmount = editor.onUnmount(() => setScrollRoot(null));
+    observer.observe(titleHeadingEl);
+    return () => observer.disconnect();
+  }, [titleHeadingShown, titleHeadingEl, scrollRoot]);
+
+  /** The page list can arrive after the body, moving a restore that is still holding. */
+  const reapplyHeldScroll = useEffectEvent(() => {
+    if (releaseHoldRef.current && loadedEditorRef.current === editor) {
+      scrollTo(scrollTarget);
+    }
+  });
+
+  /** See `.wit-editor-surface` CSS for which element scrolls. */
+  useEffect(() => {
+    const sync = () => {
+      setScrollRoot(scrollElement());
+      setOpenerHost(showOpener ? openerHostElement(editor) : null);
+    };
+    sync();
+    reapplyHeldScroll();
+    const offMount = editor.onMount(sync);
+    const offUnmount = editor.onUnmount(() => {
+      setScrollRoot(null);
+      setOpenerHost(null);
+    });
     return () => {
       offMount();
       offUnmount();
     };
-  }, [editor]);
+  }, [editor, scrollElement, showOpener]);
 
   useEffect(() => {
     if (!scrollRoot || !pageId || !onScrollAnchorChange) {
@@ -397,7 +504,21 @@ export function PageEditor({
 
   return (
     <div
-      className="wit-editor-surface"
+      className={
+        chapterSlide
+          ? `wit-editor-surface wit-chapter-enter-${chapterSlide}`
+          : "wit-editor-surface"
+      }
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) {
+          setChapterSlide(null);
+        }
+      }}
+      data-sheet-measure={sheet?.measure ?? undefined}
+      data-scene-break={
+        sheet && sheet.scene_break !== "rule" ? sheet.scene_break : undefined
+      }
+      data-sheet-opener={showOpener ? openerKind ?? undefined : undefined}
       onPointerDownCapture={handleEditorPointerDown}
     >
       {overlayStale && !overlayNoticeDismissed ? (
@@ -425,11 +546,32 @@ export function PageEditor({
           </div>
         </div>
       ) : null}
+      {showOpener && openerHost
+        ? createPortal(
+            <header
+              ref={titleHeadingShown ? setTitleHeadingEl : undefined}
+              className={`wit-chapter-opener wit-chapter-opener--${openerKind}`}
+            >
+              {showTitleLine ? (
+                <span className="wit-chapter-opener-title">{openerTitle}</span>
+              ) : null}
+              {showVersion ? (
+                <span className="wit-chapter-opener-meta">{openerVersion}</span>
+              ) : null}
+              {showAuthors ? (
+                <span className="wit-chapter-opener-meta">
+                  {openerAuthors.join(", ")}
+                </span>
+              ) : null}
+            </header>,
+            openerHost,
+          )
+        : null}
       <PageNavButtons
         pageId={pageId}
         pages={pages}
         scrollRoot={scrollRoot}
-        onNavigate={onNavigateToPage}
+        onNavigate={goToNeighbor}
       />
       <BlockNoteView
         editor={editor}

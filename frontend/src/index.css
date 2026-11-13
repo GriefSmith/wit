@@ -5,10 +5,11 @@
   --wit-font-code: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
   --wit-font-mono: var(--wit-font-code);
   /* Read/edit vs chrome: two distinct families; every preset overrides both. */
-  --wit-font-editor: var(--wit-font-code);
+  --wit-font-editor:
+    'Atkinson Hyperlegible', 'Inter', system-ui, 'Segoe UI', sans-serif;
   --wit-font-sidebar:
     'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  /* Body size for the page editor only (gear “Size”); dashboard chrome uses fixed rem steps. */
+  /* Body size for the page editor only (gear “Size Bump”); dashboard chrome uses fixed rem steps. */
   --wit-editor-body-font-size: 1rem;
   --wit-paper: #f7f4eb;
   --wit-paper-ink: #252219;
@@ -60,35 +61,39 @@
   --pico-border-radius: 2px;
 }
 
-/* Optional typography presets: `data-font-preset` on <html> (set by Settings). */
-html[data-font-preset='literary'] {
+/* Optional typefaces: `data-typeface` on <html> (set by Settings). */
+html[data-typeface='literary'] {
   --wit-font-editor:
     'Lora', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;
   --wit-font-sidebar:
     'Source Serif 4', 'Apple Garamond', Garamond, Georgia, 'Times New Roman', serif;
 }
 
-html[data-font-preset='document'] {
+html[data-typeface='document'] {
   --wit-font-editor:
     'IBM Plex Sans', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
   --wit-font-sidebar:
     'Atkinson Hyperlegible', 'IBM Plex Sans', system-ui, 'Segoe UI', sans-serif;
 }
 
-html[data-font-preset='plain'] {
+html[data-typeface='blog'] {
   --wit-font-editor:
-    'Atkinson Hyperlegible', 'Inter', system-ui, 'Segoe UI', sans-serif;
+    'Source Serif 4', Palatino, Georgia, 'Times New Roman', serif;
   --wit-font-sidebar:
-    'IBM Plex Sans', system-ui, 'Segoe UI', 'Atkinson Hyperlegible', sans-serif;
+    'IBM Plex Sans', system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Page editor body scale only (`data-text-size` on <html>); sidebar/header stay on fixed rem steps. */
-html[data-text-size='large'] {
-  --wit-editor-body-font-size: 1.14rem;
+/* Page editor body scale only (`data-size-bump` on <html>); sidebar/header stay on fixed rem steps. */
+html[data-size-bump='x1.15'] {
+  --wit-editor-body-font-size: 1.15rem;
 }
 
-html[data-text-size='granny'] {
+html[data-size-bump='x1.3'] {
   --wit-editor-body-font-size: 1.3rem;
+}
+
+html[data-size-bump='x1.5'] {
+  --wit-editor-body-font-size: 1.5rem;
 }
 
 /* Light — warm paper */
@@ -605,17 +610,62 @@ body {
   font-family: var(--wit-font-editor);
 }
 
-html[data-font-preset='literary'] .bn-editor {
+html[data-typeface='literary'] .bn-editor {
   line-height: 1.72;
 }
 
-html[data-font-preset='document'] .bn-editor {
+html[data-typeface='document'] .bn-editor {
   line-height: 1.6;
 }
 
-html[data-font-preset='plain'] .bn-editor {
+html[data-typeface='blog'] .bn-editor {
+  line-height: 1.7;
+}
+
+html:not([data-typeface]) .bn-editor {
   line-height: 1.68;
   letter-spacing: 0.012em;
+}
+
+.wit-editor-surface[data-sheet-measure] .bn-editor {
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
+.wit-editor-surface[data-sheet-measure='narrow'] .bn-editor {
+  max-width: 58ch;
+}
+
+.wit-editor-surface[data-sheet-measure='book'] .bn-editor {
+  max-width: 66ch;
+}
+
+.wit-editor-surface[data-sheet-measure='wide'] .bn-editor {
+  max-width: 78ch;
+}
+
+.wit-editor-surface[data-scene-break='gap'] [data-content-type='divider'] hr {
+  visibility: hidden;
+}
+
+.wit-editor-surface[data-scene-break='gap'] [data-content-type='divider'] {
+  min-height: 2em;
+}
+
+.wit-editor-surface[data-scene-break='ornament'] [data-content-type='divider'] {
+  min-height: 2em;
+  justify-content: center;
+  align-items: center;
+  font-family: var(--wit-font-editor);
+}
+
+.wit-editor-surface[data-scene-break='ornament'] [data-content-type='divider'] hr {
+  display: none;
+}
+
+.wit-editor-surface[data-scene-break='ornament'] [data-content-type='divider']::after {
+  content: '* * *';
 }
 
 .bn-editor {
@@ -1289,6 +1339,8 @@ html[data-theme='dark'] .wit-pin-preview-card {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* A chapter slide starts outside this column, not over the rail. */
+  overflow: hidden;
 }
 
 .wit-main-route-context {
@@ -1442,6 +1494,103 @@ html.wit-settings-open .wit-page-nav-btn--prev {
   font-size: var(--wit-editor-body-font-size);
   /* Reserve space so page nav chips do not sit over block text. */
   padding-right: 7.75rem;
+}
+
+.wit-editor-surface[data-sheet-opener] .bn-root {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.wit-editor-surface[data-sheet-opener] .bn-editor {
+  height: auto;
+  overflow: visible;
+  flex: 1 0 auto;
+}
+
+/* The box keeps the body size so its `ch` measure matches `.bn-editor`. */
+.wit-chapter-opener {
+  order: -1;
+  flex-shrink: 0;
+  margin: 0 0 calc(var(--wit-editor-body-font-size) * 2);
+  padding-top: 2.5rem;
+  padding-left: clamp(0.75rem, 3vw, 2.5rem);
+  padding-right: 7.75rem;
+  box-sizing: border-box;
+  text-align: center;
+  font-family: var(--wit-font-editor);
+  font-size: var(--wit-editor-body-font-size);
+  color: inherit;
+}
+
+.wit-chapter-opener-title {
+  display: block;
+}
+
+.wit-chapter-opener-meta {
+  display: block;
+  font-size: 1em;
+}
+
+.wit-chapter-opener--book .wit-chapter-opener-title {
+  font-size: 1.5em;
+}
+
+.wit-chapter-opener--title .wit-chapter-opener-title {
+  font-size: 2.25em;
+}
+
+.wit-editor-surface[data-sheet-measure='narrow'] .wit-chapter-opener {
+  max-width: 58ch;
+}
+
+.wit-editor-surface[data-sheet-measure='book'] .wit-chapter-opener {
+  max-width: 66ch;
+}
+
+.wit-editor-surface[data-sheet-measure='wide'] .wit-chapter-opener {
+  max-width: 78ch;
+}
+
+.wit-editor-surface[data-sheet-measure] .wit-chapter-opener {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@keyframes wit-chapter-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes wit-chapter-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.wit-editor-surface.wit-chapter-enter-from-left {
+  animation: wit-chapter-from-left 300ms ease-out;
+}
+
+.wit-editor-surface.wit-chapter-enter-from-right {
+  animation: wit-chapter-from-right 300ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wit-editor-surface.wit-chapter-enter-from-left,
+  .wit-editor-surface.wit-chapter-enter-from-right {
+    animation: none;
+  }
 }
 
 .wit-app-header {

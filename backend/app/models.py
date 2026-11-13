@@ -15,6 +15,9 @@ class PageMeta(BaseModel):
     )
     tags: list[str] = Field(default_factory=list)
     created: str | None = None
+    style: dict[str, str] | None = None
+    version: str | None = None
+    authors: list[str] | None = None
 
 
 class DuplicateIdWarning(BaseModel):

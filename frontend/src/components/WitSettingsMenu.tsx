@@ -4,12 +4,12 @@ import {
   type AccentName,
   BG_THEME_MENU_OPTIONS,
   type BgThemeName,
-  type FontPresetName,
-  type TextSizeName,
+  type SizeBumpName,
+  type TypefaceName,
   isAccentName,
   isBgThemeName,
-  isFontPresetName,
-  isTextSizeName,
+  isSizeBumpName,
+  isTypefaceName,
 } from "../lib/witAppearance";
 
 const ACCENT_OPTIONS: { value: AccentName; label: string }[] = [
@@ -22,17 +22,18 @@ const ACCENT_OPTIONS: { value: AccentName; label: string }[] = [
   { value: "amber", label: "Amber" },
 ];
 
-const FONT_PRESET_OPTIONS: { value: FontPresetName; label: string }[] = [
+const TYPEFACE_OPTIONS: { value: TypefaceName; label: string }[] = [
   { value: "default", label: "Default" },
   { value: "literary", label: "Literary" },
   { value: "document", label: "Document" },
-  { value: "plain", label: "Plain" },
+  { value: "blog", label: "Blog" },
 ];
 
-const TEXT_SIZE_OPTIONS: { value: TextSizeName; label: string }[] = [
-  { value: "default", label: "Default" },
-  { value: "large", label: "Large" },
-  { value: "granny", label: "Granny" },
+const SIZE_BUMP_OPTIONS: { value: SizeBumpName; label: string }[] = [
+  { value: "none", label: "None" },
+  { value: "x1.15", label: "x1.15" },
+  { value: "x1.3", label: "x1.3" },
+  { value: "x1.5", label: "x1.5" },
 ];
 
 /**
@@ -69,10 +70,10 @@ function GearIcon() {
 type Props = {
   accent: AccentName;
   onAccentChange: (next: AccentName) => void;
-  fontPreset: FontPresetName;
-  onFontPresetChange: (next: FontPresetName) => void;
-  textSize: TextSizeName;
-  onTextSizeChange: (next: TextSizeName) => void;
+  typeface: TypefaceName;
+  onTypefaceChange: (next: TypefaceName) => void;
+  sizeBump: SizeBumpName;
+  onSizeBumpChange: (next: SizeBumpName) => void;
   bgTheme: BgThemeName;
   onBgThemeChange: (next: BgThemeName) => void;
 };
@@ -80,10 +81,10 @@ type Props = {
 export function WitSettingsMenu({
   accent,
   onAccentChange,
-  fontPreset,
-  onFontPresetChange,
-  textSize,
-  onTextSizeChange,
+  typeface,
+  onTypefaceChange,
+  sizeBump,
+  onSizeBumpChange,
   bgTheme,
   onBgThemeChange,
 }: Props) {
@@ -127,18 +128,18 @@ export function WitSettingsMenu({
       <div className="wit-app-settings-panel">
         <div className="wit-settings-rows">
           <label className="wit-settings-row">
-            <span className="wit-settings-row-label">Style</span>
+            <span className="wit-settings-row-label">Typeface</span>
             <select
-              value={fontPreset}
+              value={typeface}
               onChange={(e) => {
                 const v = e.target.value;
-                if (isFontPresetName(v)) {
-                  onFontPresetChange(v);
+                if (isTypefaceName(v)) {
+                  onTypefaceChange(v);
                 }
               }}
-              aria-label="Typography style"
+              aria-label="Typeface"
             >
-              {FONT_PRESET_OPTIONS.map((o) => (
+              {TYPEFACE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
@@ -146,18 +147,18 @@ export function WitSettingsMenu({
             </select>
           </label>
           <label className="wit-settings-row">
-            <span className="wit-settings-row-label">Page Size</span>
+            <span className="wit-settings-row-label">Size Bump</span>
             <select
-              value={textSize}
+              value={sizeBump}
               onChange={(e) => {
                 const v = e.target.value;
-                if (isTextSizeName(v)) {
-                  onTextSizeChange(v);
+                if (isSizeBumpName(v)) {
+                  onSizeBumpChange(v);
                 }
               }}
-              aria-label="Page editor text size (sidebar and header stay fixed)"
+              aria-label="Size bump for page editor text (sidebar and header stay fixed)"
             >
-              {TEXT_SIZE_OPTIONS.map((o) => (
+              {SIZE_BUMP_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>

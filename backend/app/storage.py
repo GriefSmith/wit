@@ -40,6 +40,45 @@ def _normalize_parent(value: object) -> str:
     return ROOT_PARENT
 
 
+_STYLE_VALUES: dict[str, set[str]] = {
+    "measure": {"narrow", "book", "wide", "default"},
+    "opener": {"title", "book", "chapter", "default"},
+    "scene_break": {"rule", "gap", "ornament", "default"},
+}
+
+
+def clean_version(raw: object) -> str | None:
+    """Return trimmed text, or None when the value is not a non-blank string."""
+    if not isinstance(raw, str):
+        return None
+    text = raw.strip()
+    return text or None
+
+
+def clean_authors(raw: object) -> list[str] | None:
+    """Return the remaining names, or None when nothing valid remains."""
+    if not isinstance(raw, list):
+        return None
+    names = [item.strip() for item in raw if isinstance(item, str) and item.strip()]
+    return names or None
+
+
+def clean_style(raw: object) -> dict[str, str] | None:
+    """Return valid style keys, or None when nothing valid remains.
+
+    A non-mapping and any unknown or misspelled value are dropped. The file
+    is not rewritten.
+    """
+    if not isinstance(raw, dict):
+        return None
+    cleaned: dict[str, str] = {}
+    for key, allowed in _STYLE_VALUES.items():
+        value = raw.get(key)
+        if isinstance(value, str) and value in allowed:
+            cleaned[key] = value
+    return cleaned or None
+
+
 def _parse_page_file(path: Path) -> tuple[PageMeta | None, str | None]:
     try:
         text = path.read_text(encoding="utf-8")
@@ -72,6 +111,9 @@ def _parse_page_file(path: Path) -> tuple[PageMeta | None, str | None]:
         order=order_val,
         tags=tags,
         created=created_str,
+        style=clean_style(meta_raw.get("style")),
+        version=clean_version(meta_raw.get("version")),
+        authors=clean_authors(meta_raw.get("authors")),
     )
     return page, None
 

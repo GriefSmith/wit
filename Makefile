@@ -38,3 +38,4 @@ install-frontend:
 test:
 	@test -x $(PYTEST) || (echo "Missing $(PYTEST). Run: make install-backend" && exit 1)
 	$(PYTEST) $(BACKEND_DIR)/tests/ -v
+	node --experimental-strip-types --test $(FRONTEND_DIR)/test/pageStyle.test.ts
