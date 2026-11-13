@@ -148,7 +148,7 @@ export function chapterEntrance(
     return { slide: null, scroll: null }
   }
   if (direction === 'next') {
-    return { slide: 'from-left', scroll: 'top' }
+    return { slide: 'from-right', scroll: 'top' }
   }
-  return { slide: 'from-right', scroll: 'bottom' }
+  return { slide: 'from-left', scroll: 'bottom' }
 }

@@ -101,11 +101,11 @@ test('a missing parent stops the walk', () => {
 
 test('chapter entrance follows the button and the destination opener', () => {
   assert.deepEqual(chapterEntrance('chapter', 'next'), {
-    slide: 'from-left',
+    slide: 'from-right',
     scroll: 'top',
   })
   assert.deepEqual(chapterEntrance('chapter', 'previous'), {
-    slide: 'from-right',
+    slide: 'from-left',
     scroll: 'bottom',
   })
   assert.deepEqual(chapterEntrance('title', 'next'), { slide: null, scroll: null })

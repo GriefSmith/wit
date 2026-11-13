@@ -7,9 +7,14 @@ tags:
   - welcome
   - docs
 title: Getting Started
+version: "1.0"
+authors:
+  - wit
+style:
+  measure: book
+  opener: title
+  scene_break: ornament
 ---
-
-# Getting Started with wit
 
 **wit** is a local-only markdown notebook. Your pages live as plain `.md` files on disk — you own and manage them however you want. There is no sync and no account; the app is just the read/write engine for human consumption.
 
@@ -56,6 +61,36 @@ Each sidecar is bound to the markdown body it was saved with (SHA-256). If you e
 
 **Reload from markdown** in the header does the rebuild on demand: it deletes the sidecar, reparses the `.md` file, and immediately writes a fresh sidecar.
 
+## Page style and openers
+
+An optional `style` map in the front matter shapes the writing column. This page's front matter adds:
+
+```yaml
+version: "1.0"
+authors:
+  - wit
+style:
+  measure: book
+  opener: title
+  scene_break: ornament
+```
+
+| Key | Values | Children inherit it |
+| --- | --- | --- |
+| `measure` | `narrow`, `book`, `wide`: column width | Yes |
+| `scene_break` | `rule`, `gap`, `ornament`: how a divider block draws | Yes |
+| `opener` | `title`, `book`, `chapter` | No, each page sets its own |
+
+`default` returns a key to the app's normal behavior; on `measure` or `scene_break` it also stops the parent's value.
+
+- **`title`**: the large centered heading above, with the page title, then `version` and `authors`.
+- **`book`**: a smaller centered title, nothing else.
+- **`chapter`**: no heading. **Next Page** slides the page in from the right, **Previous Page** from the left.
+
+`version` and `authors` show only under a `title` heading. A child `title` page inherits them from its nearest `title` ancestor; write either one in the child to override it. Values the app doesn't recognize are ignored, and the file is never rewritten. The typeface stays in the gear menu.
+
+The divider below draws as `* * *` because of `scene_break: ornament`.
+
 ---
 
 ## Creating and editing pages
@@ -95,7 +130,7 @@ A **Card** is a block of text plus an image URL, with the image on the left or r
 The gear menu in the header sets:
 
 - **Accent** — Default, Pine, Mint, Cyan, Violet, Scarlet, Amber
-- **Font** — Default, Literary, Document, Plain
+- **Font** — Default, Literary, Document, Blog
 - **Text size** — Default, Large, Granny
 - **Background** — System, Forest, Steppe, Mountain, Ocean, Dune, Wasteland
 

@@ -7,11 +7,25 @@ tags:
 - welcome
 - docs
 title: Your First Page
+version: "1.1"
+style:
+  opener: title
+  scene_break: gap
 ---
 
-# Your First Page
-
 This page is a child of **Getting Started**. The sidebar shows the tree; indent pages by setting a `parent` id.
+
+## Style in action
+
+This page's front matter sets only `opener: title`, `scene_break: gap`, and `version: "1.1"`. The rest comes from **Getting Started**:
+
+- The `book` column width is inherited.
+- The heading shows this page's `1.1` version and the parent's authors.
+- The divider below is blank space (`gap`) instead of the parent's `* * *`.
+
+---
+
+To see a chapter slide, change `opener` here to `chapter`, then press **Next Page** on Getting Started.
 
 ## Editor basics
 
