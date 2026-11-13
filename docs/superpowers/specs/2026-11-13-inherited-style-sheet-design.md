@@ -1,6 +1,6 @@
 # Inherited style sheet
 
-A page may carry a partial `style` map in its frontmatter, plus `version` and `authors`. Opening a page walks its ancestors and overlays `measure` and `scene_break`. `opener` is read from the open page only. The sheet owns the column measure, that page's opening, and scene breaks. The gear menu keeps the typeface, paper color, and the size bump, and none of those are written into the file.
+A page may carry a partial `style` map in its frontmatter, plus `version` and `authors`. Opening a page walks its ancestors and overlays `measure` and `scene_break`. `opener` is read from the open page only. On a `title` page, `version` and `authors` fall back to the nearest `title` ancestor. The sheet owns the column measure, that page's opening, and scene breaks. The gear menu keeps the typeface, paper color, and the size bump, and none of those are written into the file.
 
 Pages with nothing resolved look as they do today.
 
@@ -29,13 +29,15 @@ The opener value `book` and the measure value `book` are different fields.
 
 `default` on `measure` or `scene_break` blocks ancestors and returns that field to the absent behavior in the table. `default` on `opener` is a plain page. `auto` and `none` are not values. A file that still contains them drops that key.
 
-`version` is a string. `authors` is a list of strings. They appear only in a `title` opening, on the page that writes them.
+`version` is a string. `authors` is a list of strings. They appear only in a `title` opening. A child inherits them from its nearest `title` ancestor, and overrides either one by writing it in its own file.
 
 ## Cascade
 
 On open, once the page list is loaded, walk from the outermost ancestor down to the current page by following `parent`. Start from an empty map. A `measure` or `scene_break` key that is present replaces that key. A key that is absent leaves the inherited value alone. A page that only sets `scene_break: gap` keeps the ancestor's measure. It keeps its own opener, which is no opening when that page does not set one.
 
-`opener` is read from the open page alone. `title`, `book`, and `chapter` apply to that file. A child does not take them, and does not take the ancestor's `version` or `authors`.
+`opener` is read from the open page alone. `title`, `book`, and `chapter` apply to that file. A child does not take them.
+
+`version` and `authors` resolve field by field, walking up from the open page. The open page's own value wins. Otherwise the value comes from the nearest ancestor whose own opener is `title`. An ancestor with any other opener, or none, is skipped and passes nothing down. A blank or invalid value counts as absent and does not block an ancestor's value. The resolved values show only when the open page's own opener is `title`. A child with no heading shows neither.
 
 The walk stops at a missing parent and at a page already seen. When an id is duplicated, the style comes from the same page the list already serves (the path that sorts first). A stale editor sidecar does not change the sheet.
 
@@ -103,7 +105,7 @@ Scan also copies `version` and `authors`. `version` is a string, or `null` when 
 
 Scan does not rewrite the file. A later body save or metadata patch writes the frontmatter back as it stands on disk, so a typo stays until you fix it. New pages are created without `style`, `version`, or `authors`.
 
-The client resolver returns measure, opener, and scene break. `measure` comes back empty when the current column width should win. `opener` comes back empty when the page has no opening. The editor surface, not the page root, sets `data-sheet-measure`, `data-sheet-opener`, and `data-scene-break`. An empty field sets no attribute. `data-sheet-opener` is `title` or `book` when that heading is shown. A chapter entrance does not set it.
+The client resolver returns measure, opener, and scene break. A second pure function, `resolveTitleMeta`, returns the inherited `version` and `authors`. `measure` comes back empty when the current column width should win. `opener` comes back empty when the page has no opening. The editor surface, not the page root, sets `data-sheet-measure`, `data-sheet-opener`, and `data-scene-break`. An empty field sets no attribute. `data-sheet-opener` is `title` or `book` when that heading is shown. A chapter entrance does not set it.
 
 ## Bad values
 
@@ -122,7 +124,7 @@ API tests in `backend/tests/test_api.py`:
 - A body save leaves `style`, `version`, and `authors` untouched.
 - A metadata patch leaves `style`, `version`, and `authors` untouched.
 
-The cascade and the chapter entrance are pure functions with no React and no DOM. The frontend has no test runner. Those functions get a Node built-in test file, and `make test` runs it after pytest. The cascade cases are: nothing set, a child inheriting a measure, a child keeping its own opener, a `typeface` key ignored, `auto` and `none` dropped, a child overriding one field, `default` clearing measure or scene break, `default` opener meaning no opening, a cycle, and a missing parent. The entrance function maps Next on a chapter page to a slide from the left landing at the top, and Previous on a chapter page to a slide from the right landing at the bottom. Next or Previous onto any other opener does not slide. A chapter opened without a button direction does not slide. The typecheck covers the surface attributes. This version has no browser suite.
+The cascade and the chapter entrance are pure functions with no React and no DOM. The frontend has no test runner. Those functions get a Node built-in test file, and `make test` runs it after pytest. The cascade cases are: nothing set, a child inheriting a measure, a child keeping its own opener, a `typeface` key ignored, `auto` and `none` dropped, a child overriding one field, `default` clearing measure or scene break, `default` opener meaning no opening, a cycle, and a missing parent. The title-meta cases are: the page's own values, a child inheriting from a `title` ancestor, a child overriding one field and inheriting the other, a non-`title` ancestor passing nothing down, the walk skipping a non-`title` page to reach a `title` ancestor, the nearest `title` ancestor winning, blank values not overriding, and a cycle. The entrance function maps Next on a chapter page to a slide from the left landing at the top, and Previous on a chapter page to a slide from the right landing at the bottom. Next or Previous onto any other opener does not slide. A chapter opened without a button direction does not slide. The typecheck covers the surface attributes. This version has no browser suite.
 
 <!--
 Better frontend testing, not part of this version: add Vitest as a frontend
@@ -137,7 +139,7 @@ jsdom and no component rendering.
 
 - A style form in the app.
 - A control that edits `version` or `authors`.
-- A child showing a parent's `version` or `authors`.
+- A child without a `title` heading showing an inherited `version` or `authors`.
 - Styling heading blocks inside the page.
 - The play-syntax legend, semantic text styles, a continuous book view, and Typst export.
 - Writing the typeface, paper color, or the size bump into the file.

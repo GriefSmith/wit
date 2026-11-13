@@ -22,6 +22,8 @@ type StylePage = {
   id: string
   parent: string
   style?: PageStyle | null
+  version?: string | null
+  authors?: string[] | null
 }
 
 function accepted(value: unknown, allowed: Set<string>): string | undefined {
@@ -82,6 +84,50 @@ export function resolvePageStyle(
     const opener = accepted(own.style?.opener, OPENERS)
     if (opener === 'title' || opener === 'book' || opener === 'chapter') {
       resolved.opener = opener
+    }
+  }
+  return resolved
+}
+
+export type TitleMeta = {
+  version: string | null
+  authors: string[] | null
+}
+
+function cleanVersion(raw: unknown): string | null {
+  if (typeof raw !== 'string') {
+    return null
+  }
+  return raw.trim() || null
+}
+
+function cleanAuthors(raw: unknown): string[] | null {
+  if (!Array.isArray(raw)) {
+    return null
+  }
+  const names = raw
+    .filter((name): name is string => typeof name === 'string')
+    .map((name) => name.trim())
+    .filter((name) => name !== '')
+  return names.length > 0 ? names : null
+}
+
+/** The open page's own values win; each missing field comes from the nearest `title` ancestor. */
+export function resolveTitleMeta(
+  pageId: string,
+  pages: readonly StylePage[],
+): TitleMeta {
+  const resolved: TitleMeta = { version: null, authors: null }
+  const upward = ancestorChain(pageId, pages).reverse()
+  for (const page of upward) {
+    const isOwn = page.id === pageId
+    if (!isOwn && accepted(page.style?.opener, OPENERS) !== 'title') {
+      continue
+    }
+    resolved.version ??= cleanVersion(page.version)
+    resolved.authors ??= cleanAuthors(page.authors)
+    if (resolved.version !== null && resolved.authors !== null) {
+      break
     }
   }
   return resolved

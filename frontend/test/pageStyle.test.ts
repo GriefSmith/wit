@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { chapterEntrance, resolvePageStyle } from '../src/lib/pageStyle.ts'
+import { chapterEntrance, resolvePageStyle, resolveTitleMeta } from '../src/lib/pageStyle.ts'
 
 const book = {
   id: 'book',
@@ -112,4 +112,84 @@ test('chapter entrance follows the button and the destination opener', () => {
   assert.deepEqual(chapterEntrance('book', 'previous'), { slide: null, scroll: null })
   assert.deepEqual(chapterEntrance(null, 'next'), { slide: null, scroll: null })
   assert.deepEqual(chapterEntrance('chapter', null), { slide: null, scroll: null })
+})
+
+const titled = {
+  id: 'titled',
+  parent: '',
+  style: { opener: 'title' },
+  version: '2',
+  authors: ['Ada', 'Lin'],
+}
+
+test('a page shows its own version and authors', () => {
+  assert.deepEqual(resolveTitleMeta('titled', [titled]), {
+    version: '2',
+    authors: ['Ada', 'Lin'],
+  })
+})
+
+test('a child inherits version and authors from a title ancestor', () => {
+  const kid = { id: 'kid', parent: 'titled', style: { opener: 'title' } }
+  assert.deepEqual(resolveTitleMeta('kid', [titled, kid]), {
+    version: '2',
+    authors: ['Ada', 'Lin'],
+  })
+})
+
+test('a child overrides one field and inherits the other', () => {
+  const kid = { id: 'kid', parent: 'titled', style: { opener: 'title' }, version: '3' }
+  assert.deepEqual(resolveTitleMeta('kid', [titled, kid]), {
+    version: '3',
+    authors: ['Ada', 'Lin'],
+  })
+})
+
+test('an ancestor that is not a title page passes nothing down', () => {
+  const plain = { id: 'plain', parent: '', style: { opener: 'book' }, version: '9', authors: ['Zed'] }
+  const kid = { id: 'kid', parent: 'plain', style: { opener: 'title' } }
+  assert.deepEqual(resolveTitleMeta('kid', [plain, kid]), { version: null, authors: null })
+})
+
+test('the walk skips a non-title page to reach a title ancestor', () => {
+  const middle = { id: 'middle', parent: 'titled', style: null, version: '5' }
+  const kid = { id: 'kid', parent: 'middle', style: { opener: 'title' } }
+  assert.deepEqual(resolveTitleMeta('kid', [titled, middle, kid]), {
+    version: '2',
+    authors: ['Ada', 'Lin'],
+  })
+})
+
+test('the nearest title ancestor wins', () => {
+  const inner = { id: 'inner', parent: 'titled', style: { opener: 'title' }, authors: ['Mo'] }
+  const kid = { id: 'kid', parent: 'inner', style: { opener: 'title' } }
+  assert.deepEqual(resolveTitleMeta('kid', [titled, inner, kid]), {
+    version: '2',
+    authors: ['Mo'],
+  })
+})
+
+test('blank values do not override and blank names are dropped', () => {
+  const kid = {
+    id: 'kid',
+    parent: 'titled',
+    style: { opener: 'title' },
+    version: '  ',
+    authors: [' ', ''],
+  }
+  assert.deepEqual(resolveTitleMeta('kid', [titled, kid]), {
+    version: '2',
+    authors: ['Ada', 'Lin'],
+  })
+  const trimmed = { ...titled, version: ' 2 ', authors: [' Ada ', '', 'Lin'] }
+  assert.deepEqual(resolveTitleMeta('titled', [trimmed]), {
+    version: '2',
+    authors: ['Ada', 'Lin'],
+  })
+})
+
+test('title meta stops on a cycle', () => {
+  const a = { id: 'a', parent: 'b', style: { opener: 'title' } }
+  const b = { id: 'b', parent: 'a', style: { opener: 'title' }, version: '1' }
+  assert.deepEqual(resolveTitleMeta('a', [a, b]), { version: '1', authors: null })
 })

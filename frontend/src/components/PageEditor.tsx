@@ -19,7 +19,7 @@ import {
   parseStoredPageBody,
 } from "../lib/blocknotePersistence";
 import { isWitPageHref, witHrefToPageId } from "../lib/internalLinks";
-import { chapterEntrance } from "../lib/pageStyle";
+import { chapterEntrance, resolveTitleMeta } from "../lib/pageStyle";
 import type { ChapterDirection, ResolvedStyle } from "../lib/pageStyle";
 import { captureScrollAnchor, holdScrollPosition } from "../lib/scrollAnchor";
 import type { ScrollAnchor, ScrollTarget } from "../lib/scrollAnchor";
@@ -115,13 +115,13 @@ export function PageEditor({
   const [scrollRoot, setScrollRoot] = useState<HTMLElement | null>(null);
   const [openerHost, setOpenerHost] = useState<HTMLElement | null>(null);
 
-  const pageMeta = pages.find((page) => page.id === pageId);
-  const openerTitle = pageMeta?.title.trim() ?? "";
-  const openerVersion = pageMeta?.version?.trim() ?? "";
-  const openerAuthors = (pageMeta?.authors ?? [])
-    .map((name) => name.trim())
-    .filter((name) => name !== "");
+  const openerTitle =
+    pages.find((page) => page.id === pageId)?.title.trim() ?? "";
   const openerKind = sheet?.opener ?? null;
+  const titleMeta =
+    openerKind === "title" && pageId ? resolveTitleMeta(pageId, pages) : null;
+  const openerVersion = titleMeta?.version ?? "";
+  const openerAuthors = titleMeta?.authors ?? [];
   const showTitleLine =
     (openerKind === "title" || openerKind === "book") && openerTitle !== "";
   const showVersion = openerKind === "title" && openerVersion !== "";
