@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { chapterEntrance, resolvePageStyle, resolveTitleMeta } from '../src/lib/pageStyle.ts'
+import {
+  chapterEntrance,
+  resolvePageStyle,
+  resolveTitleMeta,
+  showPreviousPage,
+} from '../src/lib/pageStyle.ts'
 
 const book = {
   id: 'book',
@@ -192,4 +197,11 @@ test('title meta stops on a cycle', () => {
   const a = { id: 'a', parent: 'b', style: { opener: 'title' } }
   const b = { id: 'b', parent: 'a', style: { opener: 'title' }, version: '1' }
   assert.deepEqual(resolveTitleMeta('a', [a, b]), { version: '1', authors: null })
+})
+
+test('a title page hides the previous-page control', () => {
+  assert.equal(showPreviousPage('title'), false)
+  assert.equal(showPreviousPage('book'), true)
+  assert.equal(showPreviousPage('chapter'), true)
+  assert.equal(showPreviousPage(null), true)
 })

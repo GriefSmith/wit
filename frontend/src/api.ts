@@ -1,3 +1,4 @@
+import type { OpenerPutBody } from './lib/openerSidecar'
 import type { PageDetail, PageMeta, PagesPayload } from './types'
 
 async function parseJson<T>(r: Response): Promise<T> {
@@ -103,5 +104,22 @@ export async function deletePage(id: string): Promise<void> {
       /* use raw text */
     }
     throw new Error(message)
+  }
+}
+
+export async function fetchOpener(id: string): Promise<unknown> {
+  const r = await fetch(`/pages/${encodeURIComponent(id)}/opener`)
+  return parseJson<unknown>(r)
+}
+
+export async function putOpener(id: string, body: OpenerPutBody): Promise<void> {
+  const r = await fetch(`/pages/${encodeURIComponent(id)}/opener`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!r.ok) {
+    const text = await r.text()
+    throw new Error(text || r.statusText)
   }
 }

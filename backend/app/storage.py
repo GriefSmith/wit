@@ -18,6 +18,200 @@ ROOT_PARENT = ""
 # JSON editor overlay lives at: `{root}/.wit/editor/{page_id}.json`
 EDITOR_OVERLAY_SUBDIR = ".wit/editor"
 
+# Title-opener presentation lives at: `{root}/.wit/opener/{page_id}.json`
+OPENER_SUBDIR = ".wit/opener"
+OPENER_PALETTES = frozenset(
+    {"forest", "steppe", "mountain", "ocean", "dune", "wasteland"}
+)
+OPENER_LABEL_MAX = 120
+
+
+class _OpenerPutError(ValueError):
+    pass
+
+
+def _opener_path(page_id: str, root: Path | None = None) -> Path:
+    return (root or get_pages_root()) / OPENER_SUBDIR / f"{page_id}.json"
+
+
+def delete_opener_sidecar(page_id: str, root: Path | None = None) -> None:
+    try:
+        _opener_path(page_id, root).unlink()
+    except OSError:
+        pass
+
+
+def _read_opener_object(page_id: str, root: Path | None = None) -> dict | None:
+    """Parsed object, or None when the file is missing or not a JSON object.
+
+    Does not write. Callers must not rewrite the file on a None read.
+    """
+    path = _opener_path(page_id, root)
+    if not path.is_file():
+        return None
+    try:
+        parsed = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(parsed, dict):
+        return None
+    return parsed
+
+
+def _clean_get_side(raw: object) -> str:
+    if not isinstance(raw, str):
+        return ""
+    text = raw.strip()
+    if len(text) > OPENER_LABEL_MAX:
+        return ""
+    return text
+
+
+def _clean_get_affix(raw: object) -> dict[str, str] | None:
+    if not isinstance(raw, dict):
+        return None
+    before = _clean_get_side(raw.get("before", ""))
+    after = _clean_get_side(raw.get("after", ""))
+    if before == "" and after == "":
+        return None
+    return {"before": before, "after": after}
+
+
+def _clean_opener_response(raw: dict) -> dict:
+    result: dict = {}
+    labels = raw.get("labels")
+    cleaned: dict = {}
+    if isinstance(labels, dict):
+        version = _clean_get_affix(labels.get("version"))
+        if version is not None:
+            cleaned["version"] = version
+        authors_raw = labels.get("authors")
+        if isinstance(authors_raw, dict):
+            authors: dict[str, dict[str, str]] = {}
+            for key, value in authors_raw.items():
+                if not isinstance(key, str) or key.strip() == "":
+                    continue
+                affix = _clean_get_affix(value)
+                if affix is not None:
+                    authors[key] = affix
+            if authors:
+                cleaned["authors"] = authors
+    if cleaned:
+        result["labels"] = cleaned
+    background = raw.get("background")
+    if (
+        isinstance(background, dict)
+        and background.get("kind") == "palette"
+        and isinstance(background.get("name"), str)
+        and background.get("name") in OPENER_PALETTES
+    ):
+        result["background"] = {"kind": "palette", "name": background["name"]}
+    return result
+
+
+def opener_get_payload(page_id: str, root: Path | None = None) -> dict | None:
+    """Cleaned opener document, `{}` when there is nothing to show, or None if the page is missing."""
+    if resolve_path_for_id(page_id, root) is None:
+        return None
+    raw = _read_opener_object(page_id, root)
+    if raw is None:
+        return {}
+    return _clean_opener_response(raw)
+
+
+def _require_put_side(raw: object) -> str:
+    if not isinstance(raw, str):
+        raise _OpenerPutError
+    text = raw.strip()
+    if len(text) > OPENER_LABEL_MAX:
+        raise _OpenerPutError
+    return text
+
+
+def _affix_for_store(raw: object) -> dict[str, str] | None:
+    if not isinstance(raw, dict) or "before" not in raw or "after" not in raw:
+        raise _OpenerPutError
+    before = _require_put_side(raw["before"])
+    after = _require_put_side(raw["after"])
+    if before == "" and after == "":
+        return None
+    return {"before": before, "after": after}
+
+
+def _labels_for_store(raw: object) -> dict:
+    if not isinstance(raw, dict):
+        raise _OpenerPutError
+    stored: dict = {}
+    if "version" in raw and raw["version"] is not None:
+        version = _affix_for_store(raw["version"])
+        if version is not None:
+            stored["version"] = version
+    authors_raw = raw.get("authors", {})
+    if authors_raw is None:
+        authors_raw = {}
+    if not isinstance(authors_raw, dict):
+        raise _OpenerPutError
+    authors: dict[str, dict[str, str]] = {}
+    for key, value in authors_raw.items():
+        if not isinstance(key, str) or key.strip() == "":
+            raise _OpenerPutError
+        affix = _affix_for_store(value)
+        if affix is not None:
+            authors[key] = affix
+    if authors:
+        stored["authors"] = authors
+    return stored
+
+
+def _background_for_store(raw: object) -> dict | None:
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise _OpenerPutError
+    if raw.get("kind") != "palette":
+        raise _OpenerPutError
+    name = raw.get("name")
+    if not isinstance(name, str) or name not in OPENER_PALETTES:
+        raise _OpenerPutError
+    return {"kind": "palette", "name": name}
+
+
+def merge_opener_put(
+    page_id: str, body: object, root: Path | None = None
+) -> str | None:
+    """Merge a put. None on success, `not_found` when the page is missing, `invalid` when the body is rejected."""
+    if resolve_path_for_id(page_id, root) is None:
+        return "not_found"
+    if not isinstance(body, dict) or (
+        "labels" not in body and "background" not in body
+    ):
+        return "invalid"
+    current = _read_opener_object(page_id, root) or {}
+    updated = dict(current)
+    try:
+        if "labels" in body:
+            stored_labels = _labels_for_store(body["labels"])
+            if stored_labels:
+                updated["labels"] = stored_labels
+            else:
+                updated.pop("labels", None)
+        if "background" in body:
+            stored_background = _background_for_store(body["background"])
+            if stored_background is None:
+                updated.pop("background", None)
+            else:
+                updated["background"] = stored_background
+    except _OpenerPutError:
+        return "invalid"
+    if not updated:
+        delete_opener_sidecar(page_id, root)
+        return None
+    _atomic_write(
+        _opener_path(page_id, root),
+        json.dumps(updated, indent=2, ensure_ascii=False) + "\n",
+    )
+    return None
+
 
 def _default_pages_root() -> Path:
     """Monorepo layout: backend/app/storage.py → wit/data/pages."""
@@ -426,6 +620,15 @@ def rename_page_id(
         except OSError:
             pass
 
+    old_opener = _opener_path(old_id, root)
+    new_opener = _opener_path(new_id, root)
+    if old_opener.is_file():
+        try:
+            new_opener.parent.mkdir(parents=True, exist_ok=True)
+            old_opener.replace(new_opener)
+        except OSError:
+            pass
+
     for path in sorted(root.rglob("*.md")):
         if path.resolve() == new_path.resolve():
             continue
@@ -456,6 +659,7 @@ def delete_page(page_id: str, *, root: Path | None = None) -> str | None:
     if path is None:
         return "not_found"
     delete_editor_overlay(page_id, root)
+    delete_opener_sidecar(page_id, root)
     try:
         path.unlink()
     except OSError:

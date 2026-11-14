@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 _wit_root = Path(__file__).resolve().parent.parent.parent
 load_dotenv(_wit_root / ".env")
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models import (
@@ -28,6 +28,8 @@ from app.storage import (
     delete_page,
     get_pages_root,
     is_valid_page_id,
+    merge_opener_put,
+    opener_get_payload,
     patch_page_meta,
     read_page_detail,
     rename_page_id,
@@ -126,6 +128,26 @@ def remove_overlay(page_id: str) -> dict[str, str]:
         raise HTTPException(status_code=404, detail="page not found")
     delete_editor_overlay(page_id)
     return {"status": "deleted"}
+
+
+@app.get("/pages/{page_id}/opener")
+def get_opener(page_id: str) -> dict:
+    _require_valid_id(page_id)
+    payload = opener_get_payload(page_id)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="page not found")
+    return payload
+
+
+@app.put("/pages/{page_id}/opener")
+def put_opener(page_id: str, body: dict = Body()) -> dict[str, str]:
+    _require_valid_id(page_id)
+    result = merge_opener_put(page_id, body)
+    if result == "not_found":
+        raise HTTPException(status_code=404, detail="page not found")
+    if result == "invalid":
+        raise HTTPException(status_code=400, detail="invalid opener document")
+    return {"status": "saved"}
 
 
 @app.delete("/pages/{page_id}", status_code=204)

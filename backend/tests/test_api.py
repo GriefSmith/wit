@@ -435,3 +435,172 @@ World
     assert "draft" in text
     assert listed["version"] == "draft"
     assert listed["authors"] == ["Ada"]
+
+
+def test_opener_get_missing_is_empty(client: TestClient) -> None:
+    r = client.get("/pages/b/opener")
+    assert r.status_code == 200
+    assert r.json() == {}
+    missing = client.get("/pages/nope/opener")
+    assert missing.status_code == 404
+
+
+def test_opener_get_invalid_json_is_empty_and_keeps_the_file(
+    client: TestClient, tmp_path: Path
+) -> None:
+    path = tmp_path / ".wit" / "opener" / "b.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{", encoding="utf-8")
+    r = client.get("/pages/b/opener")
+    assert r.status_code == 200
+    assert r.json() == {}
+    assert path.read_text(encoding="utf-8") == "{"
+
+
+def test_opener_get_drops_overlong_and_unknown_kind(
+    client: TestClient, tmp_path: Path
+) -> None:
+    path = tmp_path / ".wit" / "opener" / "b.json"
+    path.parent.mkdir(parents=True)
+    raw = json.dumps(
+        {
+            "labels": {
+                "version": {"before": "x" * 121, "after": "kept"},
+                "authors": {"Ada": {"before": 3, "after": "drew"}},
+            },
+            "background": {"kind": "texture", "name": "paper"},
+        }
+    )
+    path.write_text(raw, encoding="utf-8")
+    body = client.get("/pages/b/opener").json()
+    assert body["labels"]["version"] == {"before": "", "after": "kept"}
+    assert body["labels"]["authors"]["Ada"] == {"before": "", "after": "drew"}
+    assert "background" not in body
+    assert path.read_text(encoding="utf-8") == raw
+
+
+def test_opener_put_labels_keeps_background_and_leaves_manuscript(
+    client: TestClient, tmp_path: Path
+) -> None:
+    client.put(
+        "/pages/b",
+        json={"editor_overlay": '{"version":2,"document":[]}'},
+    )
+    opener = tmp_path / ".wit" / "opener" / "b.json"
+    opener.parent.mkdir(parents=True)
+    opener.write_text(
+        json.dumps(
+            {
+                "background": {"kind": "texture", "name": "paper", "scale": 2},
+                "labels": {"version": {"before": "old", "after": ""}},
+            }
+        ),
+        encoding="utf-8",
+    )
+    md_before = (tmp_path / "b.md").read_text(encoding="utf-8")
+    editor_before = (tmp_path / ".wit" / "editor" / "b.json").read_text(encoding="utf-8")
+    r = client.put(
+        "/pages/b/opener",
+        json={"labels": {"version": {"before": " version so far: ", "after": ""}}},
+    )
+    assert r.status_code == 200
+    stored = json.loads(opener.read_text(encoding="utf-8"))
+    assert stored["background"] == {"kind": "texture", "name": "paper", "scale": 2}
+    # The file is rewritten as pretty JSON. Parsed equality is the check that the
+    # background object was not dropped or reinterpreted. A rejected put, below,
+    # leaves the file bytes unchanged.
+    assert stored["labels"] == {"version": {"before": "version so far:", "after": ""}}
+    assert (tmp_path / "b.md").read_text(encoding="utf-8") == md_before
+    assert (tmp_path / ".wit" / "editor" / "b.json").read_text(encoding="utf-8") == editor_before
+
+
+def test_opener_put_palette_leaves_labels(client: TestClient, tmp_path: Path) -> None:
+    client.put(
+        "/pages/b/opener",
+        json={"labels": {"authors": {"Ada": {"before": "written by:", "after": ""}}}},
+    )
+    r = client.put(
+        "/pages/b/opener",
+        json={"background": {"kind": "palette", "name": "ocean"}},
+    )
+    assert r.status_code == 200
+    stored = json.loads((tmp_path / ".wit" / "opener" / "b.json").read_text(encoding="utf-8"))
+    assert stored["labels"]["authors"]["Ada"]["before"] == "written by:"
+    assert stored["background"] == {"kind": "palette", "name": "ocean"}
+    cleared = client.put("/pages/b/opener", json={"background": None})
+    assert cleared.status_code == 200
+    stored = json.loads((tmp_path / ".wit" / "opener" / "b.json").read_text(encoding="utf-8"))
+    assert "background" not in stored
+    assert "Ada" in stored["labels"]["authors"]
+
+
+def test_opener_put_rejects_bad_background_and_long_label(
+    client: TestClient, tmp_path: Path
+) -> None:
+    path = tmp_path / ".wit" / "opener" / "b.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{}\n", encoding="utf-8")
+    before = path.read_text(encoding="utf-8")
+    bad_name = client.put(
+        "/pages/b/opener",
+        json={"background": {"kind": "palette", "name": "system"}},
+    )
+    bad_kind = client.put(
+        "/pages/b/opener",
+        json={"background": {"kind": "texture", "name": "paper"}},
+    )
+    too_long = client.put(
+        "/pages/b/opener",
+        json={"labels": {"version": {"before": "y" * 121, "after": ""}}},
+    )
+    assert bad_name.status_code == 400
+    assert bad_kind.status_code == 400
+    assert too_long.status_code == 400
+    assert path.read_text(encoding="utf-8") == before
+    missing = client.put("/pages/nope/opener", json={"labels": {}})
+    assert missing.status_code == 404
+
+
+def test_opener_put_deletes_file_when_nothing_remains(
+    client: TestClient, tmp_path: Path
+) -> None:
+    client.put(
+        "/pages/b/opener",
+        json={"labels": {"version": {"before": "v", "after": ""}}},
+    )
+    path = tmp_path / ".wit" / "opener" / "b.json"
+    assert path.is_file()
+    r = client.put(
+        "/pages/b/opener",
+        json={"labels": {"version": {"before": " ", "after": ""}}},
+    )
+    assert r.status_code == 200
+    assert not path.exists()
+
+
+def test_opener_rename_delete_and_manuscript_writes_keep_or_move_the_file(
+    client: TestClient, tmp_path: Path
+) -> None:
+    path = tmp_path / ".wit" / "opener" / "b.json"
+    path.parent.mkdir(parents=True)
+    path.write_text('{"labels": {"version": {"before": "v", "after": ""}}}\n', encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    saved = client.put("/pages/b", json={"markdown_body": "Updated\n"})
+    assert saved.status_code == 200
+    assert path.read_text(encoding="utf-8") == text
+    client.put(
+        "/pages/b",
+        json={"editor_overlay": '{"version":2,"document":[]}'},
+    )
+    removed = client.delete("/pages/b/overlay")
+    assert removed.status_code == 200
+    assert path.read_text(encoding="utf-8") == text
+    assert not (tmp_path / ".wit" / "editor" / "b.json").exists()
+    renamed = client.patch("/pages/b/meta", json={"new_id": "beta-page"})
+    assert renamed.status_code == 200
+    moved = tmp_path / ".wit" / "opener" / "beta-page.json"
+    assert moved.is_file()
+    assert not path.exists()
+    deleted = client.delete("/pages/beta-page")
+    assert deleted.status_code == 204
+    assert not moved.exists()

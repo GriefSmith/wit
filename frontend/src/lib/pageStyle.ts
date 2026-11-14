@@ -152,3 +152,7 @@ export function chapterEntrance(
   }
   return { slide: 'from-left', scroll: 'bottom' }
 }
+
+export function showPreviousPage(opener: SheetOpener | null): boolean {
+  return opener !== 'title'
+}

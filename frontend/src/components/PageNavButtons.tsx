@@ -10,9 +10,16 @@ type Props = {
   pages: PageMeta[]
   scrollRoot: HTMLElement | null
   onNavigate: (pageId: string, direction: 'next' | 'previous') => void
+  showPrevious?: boolean
 }
 
-export function PageNavButtons({ pageId, pages, scrollRoot, onNavigate }: Props) {
+export function PageNavButtons({
+  pageId,
+  pages,
+  scrollRoot,
+  onNavigate,
+  showPrevious = true,
+}: Props) {
   const { prevId, nextId } = adjacentPageIdsInTreeOrder(pages, pageId)
   const [atTop, setAtTop] = useState(true)
   const [atBottom, setAtBottom] = useState(true)
@@ -63,7 +70,7 @@ export function PageNavButtons({ pageId, pages, scrollRoot, onNavigate }: Props)
 
   return (
     <div className="wit-page-nav" aria-label="Page navigation" role="group">
-      {atTop ? (
+      {showPrevious && atTop ? (
         <button
           type="button"
           className="wit-page-nav-btn wit-page-nav-btn--prev"

@@ -12,14 +12,30 @@ import {
 import type { PointerEvent, Ref } from "react";
 import { createPortal } from "react-dom";
 
-import { deletePageOverlay, fetchPage, putPageContent } from "../api";
+import {
+  deletePageOverlay,
+  fetchOpener,
+  fetchPage,
+  putOpener,
+  putPageContent,
+} from "../api";
 import {
   extractStructuralOverlay,
   peelStyleEdgesForMarkdown,
   parseStoredPageBody,
 } from "../lib/blocknotePersistence";
 import { isWitPageHref, witHrefToPageId } from "../lib/internalLinks";
-import { chapterEntrance, resolveTitleMeta } from "../lib/pageStyle";
+import { cleanOpenerDocument, emptyOpenerDocument } from "../lib/openerSidecar";
+import type {
+  OpenerDocument,
+  OpenerPalette,
+  StoredLabels,
+} from "../lib/openerSidecar";
+import {
+  chapterEntrance,
+  resolveTitleMeta,
+  showPreviousPage,
+} from "../lib/pageStyle";
 import type { ChapterDirection, ResolvedStyle } from "../lib/pageStyle";
 import { captureScrollAnchor, holdScrollPosition } from "../lib/scrollAnchor";
 import type { ScrollAnchor, ScrollTarget } from "../lib/scrollAnchor";
@@ -27,6 +43,7 @@ import { witBlockNoteSchema } from "../lib/witBlockNoteSchema";
 import type { PageMeta } from "../types";
 
 import { PageNavButtons } from "./PageNavButtons";
+import { TitleOpener } from "./TitleOpener";
 import { witEditorSideMenu } from "./WitEditorSideMenu";
 
 /** Scroll writes are batched; Safari throttles frequent `history.replaceState`. */
@@ -132,6 +149,8 @@ export function PageEditor({
     null,
   );
   const [titleHeadingInView, setTitleHeadingInView] = useState(false);
+  const [openerDoc, setOpenerDoc] =
+    useState<OpenerDocument>(emptyOpenerDocument);
   const [chapterSlide, setChapterSlide] = useState<
     "from-left" | "from-right" | null
   >(null);
@@ -180,6 +199,39 @@ export function PageEditor({
       entranceRef.current = { pageId: id, direction };
     },
     [onNavigateToPage],
+  );
+
+  const commitOpenerLabels = useCallback(
+    async (labels: StoredLabels) => {
+      if (!pageId) {
+        return;
+      }
+      await putOpener(pageId, { labels });
+      setOpenerDoc((prev) => ({
+        ...prev,
+        labels: {
+          version: labels.version ?? null,
+          authors: labels.authors ?? {},
+        },
+      }));
+    },
+    [pageId],
+  );
+
+  const commitOpenerBackground = useCallback(
+    async (palette: OpenerPalette | null) => {
+      if (!pageId) {
+        return;
+      }
+      await putOpener(pageId, {
+        background: palette ? { kind: "palette", name: palette } : null,
+      });
+      setOpenerDoc((prev) => ({
+        ...prev,
+        background: palette ? { kind: "palette", name: palette } : null,
+      }));
+    },
+    [pageId],
   );
 
   const handleEditorPointerDown = useCallback(
@@ -443,6 +495,29 @@ export function PageEditor({
     return () => observer.disconnect();
   }, [titleHeadingShown, titleHeadingEl, scrollRoot]);
 
+  useEffect(() => {
+    if (openerKind !== "title" || !pageId) {
+      setOpenerDoc(emptyOpenerDocument());
+      return;
+    }
+    let cancelled = false;
+    setOpenerDoc(emptyOpenerDocument());
+    void fetchOpener(pageId)
+      .then((raw) => {
+        if (!cancelled) {
+          setOpenerDoc(cleanOpenerDocument(raw));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOpenerDoc(emptyOpenerDocument());
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [openerKind, pageId]);
+
   /** The page list can arrive after the body, moving a restore that is still holding. */
   const reapplyHeldScroll = useEffectEvent(() => {
     if (releaseHoldRef.current && loadedEditorRef.current === editor) {
@@ -546,22 +621,28 @@ export function PageEditor({
           </div>
         </div>
       ) : null}
-      {showOpener && openerHost
+      {showOpener && openerHost && openerKind === "title"
+        ? createPortal(
+            <TitleOpener
+              key={pageId}
+              ref={titleHeadingShown ? setTitleHeadingEl : undefined}
+              title={showTitleLine ? openerTitle : ""}
+              version={showVersion ? openerVersion : ""}
+              authors={showAuthors ? openerAuthors : []}
+              doc={openerDoc}
+              onCommitLabels={commitOpenerLabels}
+              onCommitBackground={commitOpenerBackground}
+            />,
+            openerHost,
+          )
+        : null}
+      {showOpener && openerHost && openerKind !== "title"
         ? createPortal(
             <header
-              ref={titleHeadingShown ? setTitleHeadingEl : undefined}
               className={`wit-chapter-opener wit-chapter-opener--${openerKind}`}
             >
               {showTitleLine ? (
                 <span className="wit-chapter-opener-title">{openerTitle}</span>
-              ) : null}
-              {showVersion ? (
-                <span className="wit-chapter-opener-meta">{openerVersion}</span>
-              ) : null}
-              {showAuthors ? (
-                <span className="wit-chapter-opener-meta">
-                  {openerAuthors.join(", ")}
-                </span>
               ) : null}
             </header>,
             openerHost,
@@ -572,6 +653,7 @@ export function PageEditor({
         pages={pages}
         scrollRoot={scrollRoot}
         onNavigate={goToNeighbor}
+        showPrevious={showPreviousPage(sheet?.opener ?? null)}
       />
       <BlockNoteView
         editor={editor}
