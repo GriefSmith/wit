@@ -1,5 +1,7 @@
 # Title Opener Presentation Implementation Plan
 
+> **Later change:** the Before/After labels in this plan were replaced by a heading options menu: a background choice, plus Visible/Hidden for the version and the authors. The spec describes what shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A title opening draws a doubled header, hides Previous Page, and stores before/after labels plus an optional palette band in an opener sidecar.
