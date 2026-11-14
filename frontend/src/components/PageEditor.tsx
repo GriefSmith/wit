@@ -28,8 +28,8 @@ import { isWitPageHref, witHrefToPageId } from "../lib/internalLinks";
 import { cleanOpenerDocument, emptyOpenerDocument } from "../lib/openerSidecar";
 import type {
   OpenerDocument,
+  OpenerHidden,
   OpenerPalette,
-  StoredLabels,
 } from "../lib/openerSidecar";
 import {
   chapterEntrance,
@@ -201,19 +201,13 @@ export function PageEditor({
     [onNavigateToPage],
   );
 
-  const commitOpenerLabels = useCallback(
-    async (labels: StoredLabels) => {
+  const commitOpenerHidden = useCallback(
+    async (hidden: OpenerHidden) => {
       if (!pageId) {
         return;
       }
-      await putOpener(pageId, { labels });
-      setOpenerDoc((prev) => ({
-        ...prev,
-        labels: {
-          version: labels.version ?? null,
-          authors: labels.authors ?? {},
-        },
-      }));
+      await putOpener(pageId, { hidden });
+      setOpenerDoc((prev) => ({ ...prev, hidden }));
     },
     [pageId],
   );
@@ -627,10 +621,10 @@ export function PageEditor({
               key={pageId}
               ref={titleHeadingShown ? setTitleHeadingEl : undefined}
               title={showTitleLine ? openerTitle : ""}
-              version={showVersion ? openerVersion : ""}
-              authors={showAuthors ? openerAuthors : []}
+              version={openerVersion}
+              authors={openerAuthors}
               doc={openerDoc}
-              onCommitLabels={commitOpenerLabels}
+              onCommitHidden={commitOpenerHidden}
               onCommitBackground={commitOpenerBackground}
             />,
             openerHost,

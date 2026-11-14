@@ -23,7 +23,7 @@ OPENER_SUBDIR = ".wit/opener"
 OPENER_PALETTES = frozenset(
     {"forest", "steppe", "mountain", "ocean", "dune", "wasteland"}
 )
-OPENER_LABEL_MAX = 120
+OPENER_HIDEABLE = ("version", "authors")
 
 
 class _OpenerPutError(ValueError):
@@ -58,46 +58,13 @@ def _read_opener_object(page_id: str, root: Path | None = None) -> dict | None:
     return parsed
 
 
-def _clean_get_side(raw: object) -> str:
-    if not isinstance(raw, str):
-        return ""
-    text = raw.strip()
-    if len(text) > OPENER_LABEL_MAX:
-        return ""
-    return text
-
-
-def _clean_get_affix(raw: object) -> dict[str, str] | None:
-    if not isinstance(raw, dict):
-        return None
-    before = _clean_get_side(raw.get("before", ""))
-    after = _clean_get_side(raw.get("after", ""))
-    if before == "" and after == "":
-        return None
-    return {"before": before, "after": after}
-
-
 def _clean_opener_response(raw: dict) -> dict:
     result: dict = {}
-    labels = raw.get("labels")
-    cleaned: dict = {}
-    if isinstance(labels, dict):
-        version = _clean_get_affix(labels.get("version"))
-        if version is not None:
-            cleaned["version"] = version
-        authors_raw = labels.get("authors")
-        if isinstance(authors_raw, dict):
-            authors: dict[str, dict[str, str]] = {}
-            for key, value in authors_raw.items():
-                if not isinstance(key, str) or key.strip() == "":
-                    continue
-                affix = _clean_get_affix(value)
-                if affix is not None:
-                    authors[key] = affix
-            if authors:
-                cleaned["authors"] = authors
-    if cleaned:
-        result["labels"] = cleaned
+    hidden = raw.get("hidden")
+    if isinstance(hidden, dict):
+        cleaned = {key: True for key in OPENER_HIDEABLE if hidden.get(key) is True}
+        if cleaned:
+            result["hidden"] = cleaned
     background = raw.get("background")
     if (
         isinstance(background, dict)
@@ -119,47 +86,17 @@ def opener_get_payload(page_id: str, root: Path | None = None) -> dict | None:
     return _clean_opener_response(raw)
 
 
-def _require_put_side(raw: object) -> str:
-    if not isinstance(raw, str):
-        raise _OpenerPutError
-    text = raw.strip()
-    if len(text) > OPENER_LABEL_MAX:
-        raise _OpenerPutError
-    return text
-
-
-def _affix_for_store(raw: object) -> dict[str, str] | None:
-    if not isinstance(raw, dict) or "before" not in raw or "after" not in raw:
-        raise _OpenerPutError
-    before = _require_put_side(raw["before"])
-    after = _require_put_side(raw["after"])
-    if before == "" and after == "":
-        return None
-    return {"before": before, "after": after}
-
-
-def _labels_for_store(raw: object) -> dict:
+def _hidden_for_store(raw: object) -> dict[str, bool]:
+    if raw is None:
+        return {}
     if not isinstance(raw, dict):
         raise _OpenerPutError
-    stored: dict = {}
-    if "version" in raw and raw["version"] is not None:
-        version = _affix_for_store(raw["version"])
-        if version is not None:
-            stored["version"] = version
-    authors_raw = raw.get("authors", {})
-    if authors_raw is None:
-        authors_raw = {}
-    if not isinstance(authors_raw, dict):
-        raise _OpenerPutError
-    authors: dict[str, dict[str, str]] = {}
-    for key, value in authors_raw.items():
-        if not isinstance(key, str) or key.strip() == "":
+    stored: dict[str, bool] = {}
+    for key, value in raw.items():
+        if key not in OPENER_HIDEABLE or not isinstance(value, bool):
             raise _OpenerPutError
-        affix = _affix_for_store(value)
-        if affix is not None:
-            authors[key] = affix
-    if authors:
-        stored["authors"] = authors
+        if value:
+            stored[key] = True
     return stored
 
 
@@ -183,18 +120,18 @@ def merge_opener_put(
     if resolve_path_for_id(page_id, root) is None:
         return "not_found"
     if not isinstance(body, dict) or (
-        "labels" not in body and "background" not in body
+        "hidden" not in body and "background" not in body
     ):
         return "invalid"
     current = _read_opener_object(page_id, root) or {}
     updated = dict(current)
     try:
-        if "labels" in body:
-            stored_labels = _labels_for_store(body["labels"])
-            if stored_labels:
-                updated["labels"] = stored_labels
+        if "hidden" in body:
+            stored_hidden = _hidden_for_store(body["hidden"])
+            if stored_hidden:
+                updated["hidden"] = stored_hidden
             else:
-                updated.pop("labels", None)
+                updated.pop("hidden", None)
         if "background" in body:
             stored_background = _background_for_store(body["background"])
             if stored_background is None:

@@ -457,29 +457,25 @@ def test_opener_get_invalid_json_is_empty_and_keeps_the_file(
     assert path.read_text(encoding="utf-8") == "{"
 
 
-def test_opener_get_drops_overlong_and_unknown_kind(
+def test_opener_get_drops_unknown_kind_and_non_true_hidden(
     client: TestClient, tmp_path: Path
 ) -> None:
     path = tmp_path / ".wit" / "opener" / "b.json"
     path.parent.mkdir(parents=True)
     raw = json.dumps(
         {
-            "labels": {
-                "version": {"before": "x" * 121, "after": "kept"},
-                "authors": {"Ada": {"before": 3, "after": "drew"}},
-            },
+            "hidden": {"version": True, "authors": "yes", "title": True},
+            "labels": {"version": {"before": "old", "after": ""}},
             "background": {"kind": "texture", "name": "paper"},
         }
     )
     path.write_text(raw, encoding="utf-8")
     body = client.get("/pages/b/opener").json()
-    assert body["labels"]["version"] == {"before": "", "after": "kept"}
-    assert body["labels"]["authors"]["Ada"] == {"before": "", "after": "drew"}
-    assert "background" not in body
+    assert body == {"hidden": {"version": True}}
     assert path.read_text(encoding="utf-8") == raw
 
 
-def test_opener_put_labels_keeps_background_and_leaves_manuscript(
+def test_opener_put_hidden_keeps_background_and_leaves_manuscript(
     client: TestClient, tmp_path: Path
 ) -> None:
     client.put(
@@ -501,40 +497,37 @@ def test_opener_put_labels_keeps_background_and_leaves_manuscript(
     editor_before = (tmp_path / ".wit" / "editor" / "b.json").read_text(encoding="utf-8")
     r = client.put(
         "/pages/b/opener",
-        json={"labels": {"version": {"before": " version so far: ", "after": ""}}},
+        json={"hidden": {"version": True, "authors": False}},
     )
     assert r.status_code == 200
     stored = json.loads(opener.read_text(encoding="utf-8"))
+    # The file is rewritten as pretty JSON. Parsed equality is the check that
+    # keys this route does not own were not dropped or reinterpreted.
     assert stored["background"] == {"kind": "texture", "name": "paper", "scale": 2}
-    # The file is rewritten as pretty JSON. Parsed equality is the check that the
-    # background object was not dropped or reinterpreted. A rejected put, below,
-    # leaves the file bytes unchanged.
-    assert stored["labels"] == {"version": {"before": "version so far:", "after": ""}}
+    assert stored["labels"] == {"version": {"before": "old", "after": ""}}
+    assert stored["hidden"] == {"version": True}
     assert (tmp_path / "b.md").read_text(encoding="utf-8") == md_before
     assert (tmp_path / ".wit" / "editor" / "b.json").read_text(encoding="utf-8") == editor_before
 
 
-def test_opener_put_palette_leaves_labels(client: TestClient, tmp_path: Path) -> None:
-    client.put(
-        "/pages/b/opener",
-        json={"labels": {"authors": {"Ada": {"before": "written by:", "after": ""}}}},
-    )
+def test_opener_put_palette_leaves_hidden(client: TestClient, tmp_path: Path) -> None:
+    client.put("/pages/b/opener", json={"hidden": {"authors": True}})
     r = client.put(
         "/pages/b/opener",
         json={"background": {"kind": "palette", "name": "ocean"}},
     )
     assert r.status_code == 200
     stored = json.loads((tmp_path / ".wit" / "opener" / "b.json").read_text(encoding="utf-8"))
-    assert stored["labels"]["authors"]["Ada"]["before"] == "written by:"
+    assert stored["hidden"] == {"authors": True}
     assert stored["background"] == {"kind": "palette", "name": "ocean"}
     cleared = client.put("/pages/b/opener", json={"background": None})
     assert cleared.status_code == 200
     stored = json.loads((tmp_path / ".wit" / "opener" / "b.json").read_text(encoding="utf-8"))
     assert "background" not in stored
-    assert "Ada" in stored["labels"]["authors"]
+    assert stored["hidden"] == {"authors": True}
 
 
-def test_opener_put_rejects_bad_background_and_long_label(
+def test_opener_put_rejects_bad_background_and_bad_hidden(
     client: TestClient, tmp_path: Path
 ) -> None:
     path = tmp_path / ".wit" / "opener" / "b.json"
@@ -549,31 +542,29 @@ def test_opener_put_rejects_bad_background_and_long_label(
         "/pages/b/opener",
         json={"background": {"kind": "texture", "name": "paper"}},
     )
-    too_long = client.put(
+    bad_key = client.put("/pages/b/opener", json={"hidden": {"title": True}})
+    bad_value = client.put("/pages/b/opener", json={"hidden": {"version": "yes"}})
+    labels_only = client.put(
         "/pages/b/opener",
-        json={"labels": {"version": {"before": "y" * 121, "after": ""}}},
+        json={"labels": {"version": {"before": "v", "after": ""}}},
     )
     assert bad_name.status_code == 400
     assert bad_kind.status_code == 400
-    assert too_long.status_code == 400
+    assert bad_key.status_code == 400
+    assert bad_value.status_code == 400
+    assert labels_only.status_code == 400
     assert path.read_text(encoding="utf-8") == before
-    missing = client.put("/pages/nope/opener", json={"labels": {}})
+    missing = client.put("/pages/nope/opener", json={"hidden": {}})
     assert missing.status_code == 404
 
 
 def test_opener_put_deletes_file_when_nothing_remains(
     client: TestClient, tmp_path: Path
 ) -> None:
-    client.put(
-        "/pages/b/opener",
-        json={"labels": {"version": {"before": "v", "after": ""}}},
-    )
+    client.put("/pages/b/opener", json={"hidden": {"version": True}})
     path = tmp_path / ".wit" / "opener" / "b.json"
     assert path.is_file()
-    r = client.put(
-        "/pages/b/opener",
-        json={"labels": {"version": {"before": " ", "after": ""}}},
-    )
+    r = client.put("/pages/b/opener", json={"hidden": {"version": False}})
     assert r.status_code == 200
     assert not path.exists()
 
@@ -583,7 +574,7 @@ def test_opener_rename_delete_and_manuscript_writes_keep_or_move_the_file(
 ) -> None:
     path = tmp_path / ".wit" / "opener" / "b.json"
     path.parent.mkdir(parents=True)
-    path.write_text('{"labels": {"version": {"before": "v", "after": ""}}}\n', encoding="utf-8")
+    path.write_text('{"hidden": {"version": true}}\n', encoding="utf-8")
     text = path.read_text(encoding="utf-8")
     saved = client.put("/pages/b", json={"markdown_body": "Updated\n"})
     assert saved.status_code == 200
