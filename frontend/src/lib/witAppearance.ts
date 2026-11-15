@@ -170,3 +170,13 @@ export function readStoredBgTheme(): BgThemeName {
 
   return "default";
 }
+
+export const HIDE_UI_STORAGE_KEY = "wit-hide-ui";
+
+/** `"1"` is on. Missing, `"0"`, and any other string are off. */
+export function readStoredHideUi(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return window.localStorage.getItem(HIDE_UI_STORAGE_KEY) === "1";
+}

@@ -20,11 +20,13 @@ import { usePages } from "./hooks/usePages";
 import {
   ACCENT_STORAGE_KEY,
   BG_THEME_STORAGE_KEY,
+  HIDE_UI_STORAGE_KEY,
   SIZE_BUMP_STORAGE_KEY,
   TYPEFACE_STORAGE_KEY,
   getSystemColorScheme,
   readStoredAccent,
   readStoredBgTheme,
+  readStoredHideUi,
   readStoredSizeBump,
   readStoredTypeface,
   resolveEffectiveColorScheme,
@@ -131,6 +133,7 @@ export default function App() {
     readStoredSizeBump(),
   );
   const [bgTheme, setBgTheme] = useState<BgThemeName>(() => readStoredBgTheme());
+  const [hideUi, setHideUi] = useState(() => readStoredHideUi());
   const systemColorScheme = useSyncExternalStore(
     subscribeSystemColorScheme,
     getSystemColorScheme,
@@ -347,6 +350,25 @@ export default function App() {
   }, [bgTheme]);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const root = document.documentElement;
+    if (hideUi) {
+      root.setAttribute("data-hide-ui", "on");
+    } else {
+      root.removeAttribute("data-hide-ui");
+    }
+    window.localStorage.setItem(HIDE_UI_STORAGE_KEY, hideUi ? "1" : "0");
+  }, [hideUi]);
+
+  useEffect(() => {
+    if (hideUi) {
+      setPreviewPin(null);
+    }
+  }, [hideUi]);
+
+  useEffect(() => {
     window.localStorage.setItem(SIDEBAR_OPEN_KEY, sidebarOpen ? "1" : "0");
   }, [sidebarOpen]);
 
@@ -369,14 +391,15 @@ export default function App() {
 
   const onLayoutResizerPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0 || !sidebarOpen) {
+      if (e.button !== 0 || !sidebarOpen || hideUi) {
         return;
       }
       e.preventDefault();
+      e.currentTarget.parentElement?.setAttribute("data-resizing", "");
       resizeState.current = { startX: e.clientX, startW: sidebarWidthPx };
       e.currentTarget.setPointerCapture(e.pointerId);
     },
-    [sidebarOpen, sidebarWidthPx],
+    [sidebarOpen, sidebarWidthPx, hideUi],
   );
 
   const onLayoutResizerPointerMove = useCallback(
@@ -397,6 +420,7 @@ export default function App() {
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (resizeState.current) {
         resizeState.current = null;
+        e.currentTarget.parentElement?.removeAttribute("data-resizing");
         try {
           e.currentTarget.releasePointerCapture(e.pointerId);
         } catch {
@@ -410,68 +434,72 @@ export default function App() {
   return (
     <div className="wit-app">
       <header className="container wit-app-header">
-        <div className="wit-app-header-left">
-          <h1>wit</h1>
-        </div>
-
-        <PageSearch pages={pages} onSelect={navigate} />
-
-        <div className="wit-app-header-right">
-          <div className="wit-app-header-save">
-            <button
-              type="button"
-              disabled={!canSave}
-              title="Save (Shift+Cmd+Enter)"
-              onClick={() => void editorRef.current?.save()}
-            >
-              {editorHeader.saving ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              className="secondary"
-              disabled={!canReloadFromMarkdown}
-              onClick={() => void editorRef.current?.reloadFromMarkdown()}
-            >
-              Reload from markdown
-            </button>
-
-            {editorHeader.loading ? (
-              <small className="wit-muted">Loading…</small>
-            ) : null}
-            {editorHeader.dirty ? (
-              <small className="wit-muted">Unsaved changes</small>
-            ) : null}
-            {editorHeader.overlayStale ? (
-              <small className="wit-muted">
-                Markdown file changed outside the editor
-              </small>
-            ) : null}
-
-            {editorHeader.saveError ? (
-              <small style={{ color: "var(--pico-del-color, crimson)" }}>
-                {editorHeader.saveError}
-              </small>
-            ) : null}
-            {editorHeader.witLinkNotice ? (
-              <small className="wit-muted">{editorHeader.witLinkNotice}</small>
-            ) : null}
+        <div className="wit-app-header-clip" inert={hideUi}>
+          <div className="wit-app-header-left">
+            <h1>wit</h1>
           </div>
 
-          <WitSettingsMenu
-            accent={accent}
-            onAccentChange={setAccent}
-            typeface={typeface}
-            onTypefaceChange={setTypeface}
-            sizeBump={sizeBump}
-            onSizeBumpChange={setSizeBump}
-            bgTheme={bgTheme}
-            onBgThemeChange={setBgTheme}
-          />
+          <PageSearch pages={pages} onSelect={navigate} hideUi={hideUi} />
+
+          <div className="wit-app-header-right">
+            <div className="wit-app-header-save">
+              <button
+                type="button"
+                disabled={!canSave}
+                title="Save (Shift+Cmd+Enter)"
+                onClick={() => void editorRef.current?.save()}
+              >
+                {editorHeader.saving ? "Saving…" : "Save"}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                disabled={!canReloadFromMarkdown}
+                onClick={() => void editorRef.current?.reloadFromMarkdown()}
+              >
+                Reload from markdown
+              </button>
+
+              {editorHeader.loading ? (
+                <small className="wit-muted">Loading…</small>
+              ) : null}
+              {editorHeader.dirty ? (
+                <small className="wit-muted">Unsaved changes</small>
+              ) : null}
+              {editorHeader.overlayStale ? (
+                <small className="wit-muted">
+                  Markdown file changed outside the editor
+                </small>
+              ) : null}
+
+              {editorHeader.saveError ? (
+                <small style={{ color: "var(--pico-del-color, crimson)" }}>
+                  {editorHeader.saveError}
+                </small>
+              ) : null}
+              {editorHeader.witLinkNotice ? (
+                <small className="wit-muted">{editorHeader.witLinkNotice}</small>
+              ) : null}
+            </div>
+
+            <WitSettingsMenu
+              accent={accent}
+              onAccentChange={setAccent}
+              typeface={typeface}
+              onTypefaceChange={setTypeface}
+              sizeBump={sizeBump}
+              onSizeBumpChange={setSizeBump}
+              bgTheme={bgTheme}
+              onBgThemeChange={setBgTheme}
+              hideUi={hideUi}
+              onHideUiChange={setHideUi}
+            />
+          </div>
         </div>
       </header>
 
       {dup.length > 0 ? (
-        <article className="container contrast">
+        <article className="container contrast" inert={hideUi}>
           <strong>Duplicate page ids</strong>
           <ul>
             {dup.map((w) => (
@@ -488,7 +516,11 @@ export default function App() {
           {sidebarOpen ? (
             <aside
               className="wit-sidebar"
-              style={{ width: sidebarWidthPx, flex: `0 0 ${sidebarWidthPx}px` }}
+              inert={hideUi}
+              style={{
+                width: hideUi ? 0 : sidebarWidthPx,
+                flex: hideUi ? "0 0 0px" : `0 0 ${sidebarWidthPx}px`,
+              }}
               aria-label="Pages and outline"
             >
               <div className="wit-sidebar-topbar">
@@ -542,6 +574,7 @@ export default function App() {
               aria-valuemin={SIDEBAR_WIDTH_MIN}
               aria-valuemax={Math.round(sidebarWidthMax())}
               className="wit-layout-resizer"
+              inert={hideUi}
               tabIndex={0}
               onPointerDown={onLayoutResizerPointerDown}
               onPointerMove={onLayoutResizerPointerMove}
@@ -571,6 +604,7 @@ export default function App() {
                   : "wit-sidebar-collapse-rail"
               }
               aria-label="Sidebar controls"
+              inert={hideUi}
             >
               {!sidebarOpen ? (
                 <button
@@ -595,6 +629,7 @@ export default function App() {
                 <nav
                   className="wit-main-route-context"
                   aria-label="Current page in outline"
+                  inert={hideUi}
                 >
                   {collapsedRouteLabel}
                 </nav>

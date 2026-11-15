@@ -13,6 +13,7 @@ import type { PageMeta } from "../types";
 type Props = {
   pages: PageMeta[];
   onSelect: (pageId: string) => void;
+  hideUi: boolean;
 };
 
 function isAppleModKey(): boolean {
@@ -22,7 +23,7 @@ function isAppleModKey(): boolean {
   return /Mac|iPhone|iPad/.test(navigator.platform);
 }
 
-export function PageSearch({ pages, onSelect }: Props) {
+export function PageSearch({ pages, onSelect, hideUi }: Props) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -47,7 +48,16 @@ export function PageSearch({ pages, onSelect }: Props) {
   }, [deferredQuery]);
 
   useEffect(() => {
+    if (hideUi) {
+      setOpen(false);
+    }
+  }, [hideUi]);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (hideUi) {
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         inputRef.current?.focus();
@@ -56,7 +66,7 @@ export function PageSearch({ pages, onSelect }: Props) {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, []);
+  }, [hideUi]);
 
   useEffect(() => {
     if (!open) {

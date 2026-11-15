@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 import {
   type AccentName,
@@ -76,6 +77,8 @@ type Props = {
   onSizeBumpChange: (next: SizeBumpName) => void;
   bgTheme: BgThemeName;
   onBgThemeChange: (next: BgThemeName) => void;
+  hideUi: boolean;
+  onHideUiChange: (next: boolean) => void;
 };
 
 export function WitSettingsMenu({
@@ -87,6 +90,8 @@ export function WitSettingsMenu({
   onSizeBumpChange,
   bgTheme,
   onBgThemeChange,
+  hideUi,
+  onHideUiChange,
 }: Props) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
 
@@ -118,9 +123,43 @@ export function WitSettingsMenu({
       document.removeEventListener("click", onDocumentClick);
       document.documentElement.classList.remove("wit-settings-open");
     };
-  }, []);
+    // Portaling remounts the <details>, so rebind to the new node.
+  }, [hideUi]);
 
-  return (
+  useLayoutEffect(() => {
+    if (!hideUi) {
+      return;
+    }
+    const el = detailsRef.current;
+    if (!el) {
+      return;
+    }
+    const place = () => {
+      const header = document.querySelector(".wit-app-header");
+      if (!(header instanceof HTMLElement)) {
+        return;
+      }
+      const rect = header.getBoundingClientRect();
+      const pad =
+        Number.parseFloat(getComputedStyle(header).paddingRight) || 0;
+      const cluster = header.querySelector(".wit-app-header-right");
+      const centerOffset =
+        cluster instanceof HTMLElement
+          ? Math.max(0, (cluster.offsetHeight - el.offsetHeight) / 2)
+          : 0;
+      el.style.top = `calc(0.85rem + ${centerOffset}px)`;
+      el.style.right = `${Math.max(0, window.innerWidth - rect.right + pad)}px`;
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("resize", place);
+      el.style.top = "";
+      el.style.right = "";
+    };
+  }, [hideUi]);
+
+  const menu = (
     <details ref={detailsRef} className="wit-app-settings">
       <summary className="wit-app-settings-summary" aria-label="Settings">
         <GearIcon />
@@ -203,8 +242,21 @@ export function WitSettingsMenu({
               ))}
             </select>
           </label>
+          <label className="wit-settings-row">
+            <span className="wit-settings-row-label">Hide UI</span>
+            <input
+              type="checkbox"
+              checked={hideUi}
+              onChange={(e) => onHideUiChange(e.target.checked)}
+            />
+          </label>
         </div>
       </div>
     </details>
   );
+
+  if (hideUi) {
+    return createPortal(menu, document.body);
+  }
+  return menu;
 }
