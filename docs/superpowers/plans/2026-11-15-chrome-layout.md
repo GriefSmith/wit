@@ -180,7 +180,7 @@ git commit -m "Add a single editor status message."
 - Consumes: existing `SidebarTree` props (`pages`, `selectedId`, `onSelect`, `onStructureChange`, `onPageCreated`, `onPageRenamed`, `onPageDeleted`, `unsavedPageId`)
 - Produces: optional props `interaction?: "manage" | "jump"` (default `"manage"`) and `onOpen?: (id: string) => void`. Existing callers omit both, so the sidebar's current double-click still renames.
 
-- [ ] **Step 1: Add the props**
+- [x] **Step 1: Add the props**
 
 On the `Props` type:
 
@@ -193,7 +193,7 @@ On the `Props` type:
 
 Destructure with `interaction = 'manage'` and `onOpen`.
 
-- [ ] **Step 2: Change the row**
+- [x] **Step 2: Change the row**
 
 In the row renderer, label double-click:
 
@@ -223,7 +223,7 @@ disableDrag={interaction === 'jump'}
 disableDrop={interaction === 'jump'}
 ```
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `npm --prefix frontend run build`
 

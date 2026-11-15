@@ -139,6 +139,10 @@ type Props = {
   onPageDeleted?: (deletedId: string) => void
   /** Page with unsaved editor changes, if any; deleting it discards them. */
   unsavedPageId?: string | null
+  /** `manage` edits the tree. `jump` only opens a page. */
+  interaction?: 'manage' | 'jump'
+  /** Manage mode: double-click opens this page instead of renaming. */
+  onOpen?: (id: string) => void
 }
 
 export function SidebarTree({
@@ -150,6 +154,8 @@ export function SidebarTree({
   onPageRenamed,
   onPageDeleted,
   unsavedPageId = null,
+  interaction = 'manage',
+  onOpen,
 }: Props) {
   const data = useMemo(() => flatToTree(pages), [pages])
   const treeRef = useRef<TreeApi<PageTreeNode> | undefined>(undefined)
@@ -284,55 +290,67 @@ export function SidebarTree({
             className="wit-tree-row-label"
             onDoubleClick={(e) => {
               e.stopPropagation()
+              if (interaction === 'jump') {
+                onSelect(node.id)
+                return
+              }
+              if (onOpen) {
+                onOpen(node.id)
+                return
+              }
               setRenameForId(node.id)
             }}
           >
             {label}
           </span>
-          <button
-            type="button"
-            className="wit-tree-rename"
-            title={`Rename “${label}”`}
-            aria-label={`Rename “${label}”`}
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              setRenameForId(node.id)
-            }}
-          >
-            ✎
-          </button>
-          <button
-            type="button"
-            className="wit-tree-add-child"
-            title={`New page under “${label}”`}
-            aria-label={`New page under “${label}”`}
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              void handleCreate(node.id, { tree, expandParentId: node.id })
-            }}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            className="wit-tree-delete"
-            title={`Delete “${label}”`}
-            aria-label={`Delete “${label}”`}
-            onClick={(e) => {
-              e.stopPropagation()
-              e.preventDefault()
-              setDeleteError(null)
-              setDeleteForId(node.id)
-            }}
-          >
-            ⌫
-          </button>
+          {interaction === 'manage' ? (
+            <>
+              <button
+                type="button"
+                className="wit-tree-rename"
+                title={`Rename “${label}”`}
+                aria-label={`Rename “${label}”`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  setRenameForId(node.id)
+                }}
+              >
+                ✎
+              </button>
+              <button
+                type="button"
+                className="wit-tree-add-child"
+                title={`New page under “${label}”`}
+                aria-label={`New page under “${label}”`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  void handleCreate(node.id, { tree, expandParentId: node.id })
+                }}
+              >
+                +
+              </button>
+              <button
+                type="button"
+                className="wit-tree-delete"
+                title={`Delete “${label}”`}
+                aria-label={`Delete “${label}”`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  e.preventDefault()
+                  setDeleteError(null)
+                  setDeleteForId(node.id)
+                }}
+              >
+                ⌫
+              </button>
+            </>
+          ) : null}
         </div>
       )
     },
-    [handleCreate],
+    [handleCreate, interaction, onOpen, onSelect],
   )
 
   return (
@@ -445,11 +463,13 @@ export function SidebarTree({
         ) : null}
       </dialog>
 
-      <div className="wit-sidebar-tree-actions">
-        <button type="button" onClick={() => void handleCreate('')}>
-          New page
-        </button>
-      </div>
+      {interaction === 'manage' ? (
+        <div className="wit-sidebar-tree-actions">
+          <button type="button" onClick={() => void handleCreate('')}>
+            New page
+          </button>
+        </div>
+      ) : null}
       {createError ? (
         <p className="wit-sidebar-create-error" role="alert">
           {createError}
@@ -465,6 +485,8 @@ export function SidebarTree({
             height={treeViewportH}
             selection={selectedId ?? undefined}
             openByDefault
+            disableDrag={interaction === 'jump'}
+            disableDrop={interaction === 'jump'}
             onSelect={(nodes) => {
               const id = nodes[0]?.id
               if (!id || id === selectedId) {
