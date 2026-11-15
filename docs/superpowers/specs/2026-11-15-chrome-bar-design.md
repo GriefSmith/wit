@@ -2,6 +2,8 @@
 
 The top bar's controls get smaller. The path is text again. It shows only while the editor is on screen. Save and Reload become compact outlined buttons, and the page arrows become bare icons. The rail icons line up, the gear loses its chevron, and the tree icon changes.
 
+The path color and the Save and Reload fill in this spec are replaced by `docs/superpowers/specs/2026-11-15-chrome-path-and-button-fills-design.md`.
+
 This replaces the path button, the jump menu, the tree icon's return target, and the Save, Reload, and arrow styling in `docs/superpowers/specs/2026-11-15-chrome-layout-design.md`. It also replaces the Hide UI rail and gear placement in that spec and in `docs/superpowers/specs/2026-11-14-hide-ui-design.md`. The Hide UI control, its storage, the status picker, and the writing column's measure stay as those specs describe them.
 
 ## Path
