@@ -304,11 +304,11 @@ git commit -m "Expose neighbor navigation on the editor handle."
 - Consumes: nothing new
 - Produces: the search input's `id` is `wit-page-search-input`. The component's own ⌘K listener stays until Task 5 removes it.
 
-- [ ] **Step 1: Set the id**
+- [x] **Step 1: Set the id**
 
 On the search `<input>`, add `id="wit-page-search-input"`.
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run: `npm --prefix frontend run build`
 

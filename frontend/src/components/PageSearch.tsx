@@ -134,6 +134,7 @@ export function PageSearch({ pages, onSelect, hideUi }: Props) {
       <label className="wit-page-search-label">
         <input
           ref={inputRef}
+          id="wit-page-search-input"
           type="text"
           role="searchbox"
           value={query}
