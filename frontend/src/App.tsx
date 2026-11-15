@@ -455,6 +455,7 @@ export default function App() {
                 <button
                   type="button"
                   className="wit-crumb-action"
+                  data-action="save"
                   disabled={!canSave}
                   title="Save (Shift+Cmd+Enter)"
                   onClick={() => void editorRef.current?.save()}
@@ -464,6 +465,7 @@ export default function App() {
                 <button
                   type="button"
                   className="wit-crumb-action"
+                  data-action="reload"
                   disabled={!canReloadFromMarkdown}
                   title="Reload from markdown"
                   onClick={() => void editorRef.current?.reloadFromMarkdown()}

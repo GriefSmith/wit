@@ -1686,14 +1686,10 @@ html[data-theme='dark'] .wit-pin-preview-card {
   font: inherit;
   line-height: 1.2;
   font-family: var(--wit-font-sidebar);
-  color: inherit;
+  color: var(--pico-muted-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.wit-crumb-path[data-empty="true"] {
-  color: var(--pico-muted-color);
 }
 
 .wit-crumb-cluster {
@@ -1731,6 +1727,30 @@ html[data-theme='dark'] .wit-pin-preview-card {
 
 .wit-crumb-action:disabled {
   opacity: 0.45;
+}
+
+.wit-crumb-action[data-action="reload"] {
+  background: #3d5688;
+  border-color: #3d5688;
+  color: var(--wit-paper);
+}
+
+.wit-crumb-action[data-action="reload"]:hover:not(:disabled) {
+  background: #4a679c;
+  border-color: #4a679c;
+  color: var(--wit-paper);
+}
+
+html[data-bg-theme] .wit-crumb-action[data-action="save"] {
+  background: var(--pico-primary-background);
+  border-color: var(--pico-primary-background);
+  color: var(--pico-primary-inverse);
+}
+
+html[data-bg-theme] .wit-crumb-action[data-action="save"]:hover:not(:disabled) {
+  background: var(--pico-primary-hover-background);
+  border-color: var(--pico-primary-hover-background);
+  color: var(--pico-primary-inverse);
 }
 
 .wit-crumb-arrow {
