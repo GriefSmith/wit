@@ -249,7 +249,7 @@ git commit -m "Let the page tree open pages or jump without editing."
 - Consumes: `onNavigateToPage(pageId: string): boolean` and `ChapterDirection`
 - Produces: `PageEditorHandle.openNeighbor(id: string, direction: ChapterDirection): boolean`. The page-corner buttons still call the same function until Task 5 removes them.
 
-- [ ] **Step 1: Return whether navigation happened**
+- [x] **Step 1: Return whether navigation happened**
 
 Replace `goToNeighbor` with:
 
@@ -268,7 +268,7 @@ const openNeighbor = useCallback(
 
 Point `PageNavButtons`'s `onNavigate` at `(id, direction) => { openNeighbor(id, direction) }`.
 
-- [ ] **Step 2: Expose it**
+- [x] **Step 2: Expose it**
 
 Add to `PageEditorHandle`:
 
@@ -278,7 +278,7 @@ openNeighbor: (id: string, direction: ChapterDirection) => boolean
 
 Add `openNeighbor` to the `useImperativeHandle` object and to its dependency array. Import `ChapterDirection` only if it is not already in scope in that file (it is used by the current `goToNeighbor`).
 
-- [ ] **Step 3: Build**
+- [x] **Step 3: Build**
 
 Run: `npm --prefix frontend run build`
 

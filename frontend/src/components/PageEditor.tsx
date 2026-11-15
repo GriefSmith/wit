@@ -76,6 +76,7 @@ export type PageEditorHandle = {
   save: () => Promise<void>;
   reloadFromMarkdown: () => Promise<void>;
   captureScrollAnchor: () => ScrollAnchor | null;
+  openNeighbor: (id: string, direction: ChapterDirection) => boolean;
 };
 
 export type PageEditorHeaderState = {
@@ -191,12 +192,13 @@ export function PageEditor({
     [onNavigateToPage, pageIdSet],
   );
 
-  const goToNeighbor = useCallback(
-    (id: string, direction: ChapterDirection) => {
+  const openNeighbor = useCallback(
+    (id: string, direction: ChapterDirection): boolean => {
       if (!onNavigateToPage(id)) {
-        return;
+        return false;
       }
       entranceRef.current = { pageId: id, direction };
+      return true;
     },
     [onNavigateToPage],
   );
@@ -444,8 +446,9 @@ export function PageEditor({
         const root = scrollElement();
         return root ? captureScrollAnchor(root) : null;
       },
+      openNeighbor,
     }),
-    [save, reloadFromMarkdown, pageId, editor, scrollElement],
+    [save, reloadFromMarkdown, pageId, editor, scrollElement, openNeighbor],
   );
 
   useEffect(() => {
@@ -646,7 +649,9 @@ export function PageEditor({
         pageId={pageId}
         pages={pages}
         scrollRoot={scrollRoot}
-        onNavigate={goToNeighbor}
+        onNavigate={(id, direction) => {
+          openNeighbor(id, direction);
+        }}
         showPrevious={showPreviousPage(sheet?.opener ?? null)}
       />
       <BlockNoteView
