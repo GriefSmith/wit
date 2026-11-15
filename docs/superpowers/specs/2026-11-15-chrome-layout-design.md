@@ -1,5 +1,7 @@
 # Chrome layout
 
+The path, the jump menu, the tree icon's return target, the Save, Reload, and arrow styling, and the Hide UI rail and gear placement in this spec are replaced by `docs/superpowers/specs/2026-11-15-chrome-bar-design.md`.
+
 The `wit` title leaves the header. The top bar is the page path on the left and a compact cluster on the right. The wide pages sidebar becomes a fixed icon rail. The path opens a jump menu. A tree icon on the rail swaps the column to a file tree for search and for create, rename, delete, and drag. The editor stays mounted while that tree is showing.
 
 This replaces the chrome list and the previous/next placement in `docs/superpowers/specs/2026-11-14-hide-ui-design.md`. The Hide UI control, its storage key, and the writing column's character measure stay as that spec describes them.
