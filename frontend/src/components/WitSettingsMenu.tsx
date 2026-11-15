@@ -142,12 +142,7 @@ export function WitSettingsMenu({
       const rect = header.getBoundingClientRect();
       const pad =
         Number.parseFloat(getComputedStyle(header).paddingRight) || 0;
-      const cluster = header.querySelector(".wit-app-header-right");
-      const centerOffset =
-        cluster instanceof HTMLElement
-          ? Math.max(0, (cluster.offsetHeight - el.offsetHeight) / 2)
-          : 0;
-      el.style.top = `calc(0.85rem + ${centerOffset}px)`;
+      el.style.top = "0.85rem";
       el.style.right = `${Math.max(0, window.innerWidth - rect.right + pad)}px`;
     };
     place();
@@ -160,7 +155,12 @@ export function WitSettingsMenu({
   }, [hideUi]);
 
   const menu = (
-    <details ref={detailsRef} className="wit-app-settings">
+    <details
+      ref={detailsRef}
+      className={
+        hideUi ? "wit-app-settings" : "wit-app-settings wit-app-settings--rail"
+      }
+    >
       <summary className="wit-app-settings-summary" aria-label="Settings">
         <GearIcon />
       </summary>

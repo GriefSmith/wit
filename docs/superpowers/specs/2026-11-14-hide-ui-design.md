@@ -1,5 +1,7 @@
 # Hide UI
 
+The chrome list and the previous/next placement in this spec are replaced by `docs/superpowers/specs/2026-11-15-chrome-layout-design.md`. The Hide UI control, its storage, and the writing column's measure stay as written here.
+
 The gear menu gains a Hide UI toggle. While it is on, the app chrome leaves the screen and the writing column eases into the center. The column keeps the measure the open page already resolved (`narrow` 58ch, `book` 66ch, `wide` 78ch, or the uncapped column when no measure is resolved). The page stays editable.
 
 ## Control

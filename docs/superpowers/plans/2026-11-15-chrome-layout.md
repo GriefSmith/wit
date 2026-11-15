@@ -344,7 +344,7 @@ This task is the layout switch. After it, the running app matches the spec. Do T
 - Consumes: `editorStatusMessage`, `SidebarTree` `interaction` / `onOpen`, `PageEditorHandle.openNeighbor`, `#wit-page-search-input`, `navigate(id): boolean`, `adjacentPageIdsInTreeOrder`, `formatPageRouteCrumb`, `pageTitleTrail`
 - Produces: the chrome described in the spec. No new exports for later tasks.
 
-- [ ] **Step 1: Add the column tree**
+- [x] **Step 1: Add the column tree**
 
 Create `frontend/src/components/ColumnTree.tsx`:
 
@@ -398,7 +398,7 @@ export function ColumnTree({
 }
 ```
 
-- [ ] **Step 2: Add the jump menu**
+- [x] **Step 2: Add the jump menu**
 
 Create `frontend/src/components/CrumbJumpMenu.tsx`:
 
@@ -468,17 +468,17 @@ export function CrumbJumpMenu({
 
 Use `import type { RefObject } from 'react'` if the file's React namespace does not include `RefObject`. Match the import style of `PageSearch.tsx` (named type imports).
 
-- [ ] **Step 3: Move ⌘K to App**
+- [x] **Step 3: Move ⌘K to App**
 
 In `PageSearch.tsx`, delete the `useEffect` that listens for meta/ctrl+K and focuses the input. Keep the effect that closes the result list when `hideUi` is true. The shortcut hint `<kbd>` stays.
 
-- [ ] **Step 4: Remove the page-corner buttons**
+- [x] **Step 4: Remove the page-corner buttons**
 
 In `PageEditor.tsx`, remove the `PageNavButtons` import and the `<PageNavButtons ... />` element. Remove the `showPreviousPage` import if nothing else in the file uses it. Keep `openNeighbor` on the handle.
 
 Delete `frontend/src/components/PageNavButtons.tsx`.
 
-- [ ] **Step 5: Replace the App chrome**
+- [x] **Step 5: Replace the App chrome**
 
 In `App.tsx`:
 
@@ -804,7 +804,7 @@ Replace the layout body. Delete the `<aside className="wit-sidebar">` and the re
 
 `onSelect={setTreeSelectionId}` matches `(id: string) => void`. `SidebarTree`'s `onSelect` may return `boolean | void`; returning void leaves the new row selected.
 
-- [ ] **Step 6: Place the gear**
+- [x] **Step 6: Place the gear**
 
 In `WitSettingsMenu.tsx`, set the `<details>` class to `wit-app-settings wit-app-settings--rail` when `hideUi` is false, and `wit-app-settings` when `hideUi` is true (the portaled gear).
 
@@ -817,7 +817,7 @@ el.style.right = `${Math.max(0, window.innerWidth - rect.right + pad)}px`
 
 Keep measuring `.wit-app-header` for `rect` and its right padding. The header is the top bar, including while Hide UI has collapsed its height.
 
-- [ ] **Step 7: CSS**
+- [x] **Step 7: CSS**
 
 Add to `frontend/src/index.css`:
 
@@ -959,7 +959,7 @@ Leave the `.wit-sidebar` and `.wit-layout-resizer` rules in the file. Nothing re
 
 Hide UI already collapses `.wit-app-header`, fades `.wit-sidebar-collapse-rail`, and hides `.wit-app > article.contrast`. Those selectors still match this layout. The gear's fixed positioning rule stays.
 
-- [ ] **Step 8: Point the Hide UI spec at this one**
+- [x] **Step 8: Point the Hide UI spec at this one**
 
 Under the title in `docs/superpowers/specs/2026-11-14-hide-ui-design.md`, add:
 
@@ -967,7 +967,7 @@ Under the title in `docs/superpowers/specs/2026-11-14-hide-ui-design.md`, add:
 The chrome list and the previous/next placement in this spec are replaced by `docs/superpowers/specs/2026-11-15-chrome-layout-design.md`. The Hide UI control, its storage, and the writing column's measure stay as written here.
 ```
 
-- [ ] **Step 9: Build and run the status test**
+- [x] **Step 9: Build and run the status test**
 
 Run: `npm --prefix frontend run build`
 
@@ -977,7 +977,7 @@ Run: `node --experimental-strip-types --test frontend/test/editorStatus.test.ts 
 
 Expected: PASS.
 
-- [ ] **Step 10: Check the running app**
+- [x] **Step 10: Check the running app**
 
 Start the dev server with `npm --prefix frontend run dev` and confirm:
 

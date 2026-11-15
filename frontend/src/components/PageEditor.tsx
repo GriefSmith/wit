@@ -31,18 +31,13 @@ import type {
   OpenerHidden,
   OpenerPalette,
 } from "../lib/openerSidecar";
-import {
-  chapterEntrance,
-  resolveTitleMeta,
-  showPreviousPage,
-} from "../lib/pageStyle";
+import { chapterEntrance, resolveTitleMeta } from "../lib/pageStyle";
 import type { ChapterDirection, ResolvedStyle } from "../lib/pageStyle";
 import { captureScrollAnchor, holdScrollPosition } from "../lib/scrollAnchor";
 import type { ScrollAnchor, ScrollTarget } from "../lib/scrollAnchor";
 import { witBlockNoteSchema } from "../lib/witBlockNoteSchema";
 import type { PageMeta } from "../types";
 
-import { PageNavButtons } from "./PageNavButtons";
 import { TitleOpener } from "./TitleOpener";
 import { witEditorSideMenu } from "./WitEditorSideMenu";
 
@@ -645,15 +640,6 @@ export function PageEditor({
             openerHost,
           )
         : null}
-      <PageNavButtons
-        pageId={pageId}
-        pages={pages}
-        scrollRoot={scrollRoot}
-        onNavigate={(id, direction) => {
-          openNeighbor(id, direction);
-        }}
-        showPrevious={showPreviousPage(sheet?.opener ?? null)}
-      />
       <BlockNoteView
         editor={editor}
         theme={colorScheme}

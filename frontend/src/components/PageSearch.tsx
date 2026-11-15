@@ -54,21 +54,6 @@ export function PageSearch({ pages, onSelect, hideUi }: Props) {
   }, [hideUi]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (hideUi) {
-        return;
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        inputRef.current?.focus();
-        setOpen(true);
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [hideUi]);
-
-  useEffect(() => {
     if (!open) {
       return;
     }

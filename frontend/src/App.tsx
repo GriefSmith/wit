@@ -5,18 +5,18 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
-  type PointerEvent as ReactPointerEvent,
 } from "react";
 
+import { ColumnTree } from "./components/ColumnTree";
+import { CrumbJumpMenu } from "./components/CrumbJumpMenu";
 import { PageEditor } from "./components/PageEditor";
-import { PageSearch } from "./components/PageSearch";
 import { PinnedBlockPreviewModal } from "./components/PinnedBlockPreviewModal";
-import { SidebarTree } from "./components/SidebarTree";
 import { WitCollapsedPinControl } from "./components/WitCollapsedPinControl";
 import { WitSettingsMenu } from "./components/WitSettingsMenu";
 import { useWitPins } from "./context/WitPinsContext";
 import { usePageNavigation } from "./hooks/usePageNavigation";
 import { usePages } from "./hooks/usePages";
+import { editorStatusMessage } from "./lib/editorStatus";
 import {
   ACCENT_STORAGE_KEY,
   BG_THEME_STORAGE_KEY,
@@ -39,35 +39,16 @@ import type {
   TypefaceName,
 } from "./lib/witAppearance";
 import { resolvePageStyle } from "./lib/pageStyle";
-import { formatPageRouteCrumb, pageTitleTrail } from "./lib/tree";
+import {
+  adjacentPageIdsInTreeOrder,
+  formatPageRouteCrumb,
+  pageTitleTrail,
+} from "./lib/tree";
 import type { WitPin } from "./types";
 import type {
   PageEditorHandle,
   PageEditorHeaderState,
 } from "./components/PageEditor";
-
-const SIDEBAR_OPEN_KEY = "wit-sidebar-open";
-const SIDEBAR_WIDTH_KEY = "wit-sidebar-width";
-
-/** Matches the previous grid cap (~300px); drag cannot shrink below this. */
-const SIDEBAR_WIDTH_MIN = 220;
-const SIDEBAR_WIDTH_DEFAULT = 280;
-const SIDEBAR_WIDTH_MAX_CAP = 520;
-/** Editor column keeps at least this width so the read/edit surface stays usable. */
-const MAIN_MIN_WIDTH = 300;
-const LAYOUT_RESIZER_WIDTH = 6;
-
-function readSidebarWidth(): number {
-  if (typeof window === "undefined") {
-    return SIDEBAR_WIDTH_DEFAULT;
-  }
-  const raw = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
-  const n = raw ? Number.parseInt(raw, 10) : NaN;
-  if (!Number.isFinite(n)) {
-    return SIDEBAR_WIDTH_DEFAULT;
-  }
-  return Math.min(SIDEBAR_WIDTH_MAX_CAP, Math.max(SIDEBAR_WIDTH_MIN, n));
-}
 
 function ChevronRightIcon() {
   return (
@@ -83,11 +64,11 @@ function ChevronRightIcon() {
   );
 }
 
-function ChevronDownIcon() {
+function ChevronLeftIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M6 9l6 6 6-6"
+        d="M15 6l-6 6 6 6"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
@@ -97,32 +78,21 @@ function ChevronDownIcon() {
   );
 }
 
-function readSidebarOpen(): boolean {
-  if (typeof window === "undefined") {
-    return true;
-  }
-  const raw = window.localStorage.getItem(SIDEBAR_OPEN_KEY);
-  if (raw === "0" || raw === "false") {
-    return false;
-  }
-  return true;
-}
-
-function sidebarWidthMax(): number {
-  if (typeof window === "undefined") {
-    return SIDEBAR_WIDTH_DEFAULT;
-  }
-  const vw = window.innerWidth;
-  const fromMain = vw - MAIN_MIN_WIDTH - LAYOUT_RESIZER_WIDTH;
-  const fromRatio = Math.floor(vw * 0.48);
-  return Math.max(
-    SIDEBAR_WIDTH_MIN,
-    Math.min(SIDEBAR_WIDTH_MAX_CAP, fromMain, fromRatio),
+function TreeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3v18M12 8h7M12 16H5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
 export default function App() {
-  const { data, error, loading, refresh } = usePages();
+  const { data, error, refresh } = usePages();
   const witPins = useWitPins();
   const [previewPin, setPreviewPin] = useState<WitPin | null>(null);
   const [accent, setAccent] = useState<AccentName>(() => readStoredAccent());
@@ -140,8 +110,11 @@ export default function App() {
     () => "light" as const,
   );
   const colorScheme = resolveEffectiveColorScheme(bgTheme, systemColorScheme);
-  const [sidebarOpen, setSidebarOpen] = useState(readSidebarOpen);
-  const [sidebarWidthPx, setSidebarWidthPx] = useState(readSidebarWidth);
+  const [columnMode, setColumnMode] = useState<"page" | "tree">("page");
+  const [treeSelectionId, setTreeSelectionId] = useState<string | null>(null);
+  const [crumbMenuOpen, setCrumbMenuOpen] = useState(false);
+  const [focusSearch, setFocusSearch] = useState(false);
+  const crumbButtonRef = useRef<HTMLButtonElement>(null);
 
   const pages = useMemo(() => data?.pages ?? [], [data]);
 
@@ -207,13 +180,19 @@ export default function App() {
     document.title = selectedTitle ? `${selectedTitle} · wit` : "wit";
   }, [selectedTitle]);
 
-  const collapsedRouteLabel = useMemo(() => {
-    if (sidebarOpen || !resolvedSelectedId) {
-      return "";
-    }
-    const trail = pageTitleTrail(pages, resolvedSelectedId);
-    return formatPageRouteCrumb(trail);
-  }, [sidebarOpen, resolvedSelectedId, pages]);
+  const treeVisible = columnMode === "tree" && !hideUi;
+  const pathPageId = treeVisible ? treeSelectionId : resolvedSelectedId;
+  const crumbText = formatPageRouteCrumb(pageTitleTrail(pages, pathPageId));
+  const { prevId, nextId } = pathPageId
+    ? adjacentPageIdsInTreeOrder(pages, pathPageId)
+    : { prevId: null, nextId: null };
+  const statusText = editorStatusMessage({
+    saveError: editorHeader.saveError,
+    overlayStale: editorHeader.overlayStale,
+    dirty: editorHeader.dirty,
+    loading: editorHeader.loading,
+    witLinkNotice: editorHeader.witLinkNotice,
+  });
 
   const dup = data?.duplicate_warnings ?? [];
 
@@ -257,10 +236,62 @@ export default function App() {
     !editorHeader.saving &&
     !editorHeader.loadError;
 
+  const openPage = useCallback(
+    (id: string) => {
+      if (!navigate(id)) {
+        return false;
+      }
+      setColumnMode("page");
+      setCrumbMenuOpen(false);
+      return true;
+    },
+    [navigate],
+  );
+
+  const showTree = useCallback(() => {
+    setTreeSelectionId(resolvedSelectedId);
+    setColumnMode("tree");
+    setCrumbMenuOpen(false);
+  }, [resolvedSelectedId]);
+
+  const onTreeIcon = useCallback(() => {
+    if (columnMode === "tree") {
+      if (treeSelectionId) {
+        openPage(treeSelectionId);
+      }
+      return;
+    }
+    showTree();
+  }, [columnMode, openPage, showTree, treeSelectionId]);
+
+  const goArrow = useCallback(
+    (id: string | null, direction: "next" | "previous") => {
+      if (!id) {
+        return;
+      }
+      const opened =
+        editorRef.current?.openNeighbor(id, direction) ?? navigate(id);
+      if (opened) {
+        setColumnMode("page");
+        setCrumbMenuOpen(false);
+      }
+    },
+    [navigate],
+  );
+
+  const closeCrumbMenu = useCallback(() => setCrumbMenuOpen(false), []);
+
+  const handlePageCreated = useCallback((id: string) => {
+    setTreeSelectionId(id);
+  }, []);
+
   const handlePageRenamed = useCallback(
     (previousId: string, nextId: string) => {
       witPins.onPageRenamed(previousId, nextId);
       renameCurrent(previousId, nextId);
+      setTreeSelectionId((current) =>
+        current === previousId ? nextId : current,
+      );
     },
     [witPins, renameCurrent],
   );
@@ -269,8 +300,17 @@ export default function App() {
   const handlePageDeleted = useCallback(
     (deletedId: string) => {
       witPins.onPageDeleted(deletedId);
+      setTreeSelectionId((current) => {
+        if (current !== deletedId) {
+          return current;
+        }
+        if (resolvedSelectedId && resolvedSelectedId !== deletedId) {
+          return resolvedSelectedId;
+        }
+        return pages.find((p) => p.id !== deletedId)?.id ?? null;
+      });
     },
-    [witPins],
+    [witPins, resolvedSelectedId, pages],
   );
 
   const openPinPreview = useCallback((pin: WitPin) => {
@@ -365,138 +405,121 @@ export default function App() {
   useEffect(() => {
     if (hideUi) {
       setPreviewPin(null);
+      setCrumbMenuOpen(false);
     }
   }, [hideUi]);
 
   useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_OPEN_KEY, sidebarOpen ? "1" : "0");
-  }, [sidebarOpen]);
+    if (!focusSearch || columnMode !== "tree" || hideUi) {
+      return;
+    }
+    document.getElementById("wit-page-search-input")?.focus();
+    setFocusSearch(false);
+  }, [columnMode, focusSearch, hideUi]);
 
+  /** ⌘K (Ctrl+K off macOS) shows the tree and focuses its search. */
   useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(sidebarWidthPx));
-  }, [sidebarWidthPx]);
-
-  /** Keep stored width within bounds when the window shrinks. */
-  useEffect(() => {
-    const clamp = () => {
-      const maxW = sidebarWidthMax();
-      setSidebarWidthPx((w) => Math.min(maxW, Math.max(SIDEBAR_WIDTH_MIN, w)));
-    };
-    clamp();
-    window.addEventListener("resize", clamp);
-    return () => window.removeEventListener("resize", clamp);
-  }, []);
-
-  const resizeState = useRef<{ startX: number; startW: number } | null>(null);
-
-  const onLayoutResizerPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (e.button !== 0 || !sidebarOpen || hideUi) {
+    const onKey = (e: KeyboardEvent) => {
+      if (hideUi) {
         return;
       }
-      e.preventDefault();
-      e.currentTarget.parentElement?.setAttribute("data-resizing", "");
-      resizeState.current = { startX: e.clientX, startW: sidebarWidthPx };
-      e.currentTarget.setPointerCapture(e.pointerId);
-    },
-    [sidebarOpen, sidebarWidthPx, hideUi],
-  );
-
-  const onLayoutResizerPointerMove = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      const st = resizeState.current;
-      if (!st) {
-        return;
-      }
-      const maxW = sidebarWidthMax();
-      const dx = e.clientX - st.startX;
-      const next = Math.min(maxW, Math.max(SIDEBAR_WIDTH_MIN, st.startW + dx));
-      setSidebarWidthPx(next);
-    },
-    [],
-  );
-
-  const onLayoutResizerPointerUp = useCallback(
-    (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (resizeState.current) {
-        resizeState.current = null;
-        e.currentTarget.parentElement?.removeAttribute("data-resizing");
-        try {
-          e.currentTarget.releasePointerCapture(e.pointerId);
-        } catch {
-          /* already released */
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        if (columnMode !== "tree") {
+          setTreeSelectionId(resolvedSelectedId);
+          setColumnMode("tree");
         }
+        setCrumbMenuOpen(false);
+        setFocusSearch(true);
       }
-    },
-    [],
-  );
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [columnMode, hideUi, resolvedSelectedId]);
 
   return (
     <div className="wit-app">
       <header className="container wit-app-header">
         <div className="wit-app-header-clip" inert={hideUi}>
-          <div className="wit-app-header-left">
-            <h1>wit</h1>
+          <div className="wit-crumb">
+            <button
+              type="button"
+              ref={crumbButtonRef}
+              className="wit-crumb-button"
+              disabled={crumbText.length === 0}
+              aria-expanded={crumbMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => {
+                if (crumbText.length === 0) {
+                  return;
+                }
+                setCrumbMenuOpen((open) => !open);
+              }}
+            >
+              {crumbText.length === 0 ? "No page" : crumbText}
+            </button>
+            {crumbMenuOpen ? (
+              <CrumbJumpMenu
+                pages={pages}
+                selectedId={pathPageId}
+                anchorRef={crumbButtonRef}
+                onOpen={openPage}
+                onClose={closeCrumbMenu}
+              />
+            ) : null}
           </div>
-
-          <PageSearch pages={pages} onSelect={navigate} hideUi={hideUi} />
-
-          <div className="wit-app-header-right">
-            <div className="wit-app-header-save">
-              <button
-                type="button"
-                disabled={!canSave}
-                title="Save (Shift+Cmd+Enter)"
-                onClick={() => void editorRef.current?.save()}
-              >
-                {editorHeader.saving ? "Saving…" : "Save"}
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                disabled={!canReloadFromMarkdown}
-                onClick={() => void editorRef.current?.reloadFromMarkdown()}
-              >
-                Reload from markdown
-              </button>
-
-              {editorHeader.loading ? (
-                <small className="wit-muted">Loading…</small>
-              ) : null}
-              {editorHeader.dirty ? (
-                <small className="wit-muted">Unsaved changes</small>
-              ) : null}
-              {editorHeader.overlayStale ? (
-                <small className="wit-muted">
-                  Markdown file changed outside the editor
-                </small>
-              ) : null}
-
-              {editorHeader.saveError ? (
-                <small style={{ color: "var(--pico-del-color, crimson)" }}>
-                  {editorHeader.saveError}
-                </small>
-              ) : null}
-              {editorHeader.witLinkNotice ? (
-                <small className="wit-muted">{editorHeader.witLinkNotice}</small>
-              ) : null}
-            </div>
-
-            <WitSettingsMenu
-              accent={accent}
-              onAccentChange={setAccent}
-              typeface={typeface}
-              onTypefaceChange={setTypeface}
-              sizeBump={sizeBump}
-              onSizeBumpChange={setSizeBump}
-              bgTheme={bgTheme}
-              onBgThemeChange={setBgTheme}
-              hideUi={hideUi}
-              onHideUiChange={setHideUi}
-            />
+          <div className="wit-crumb-cluster">
+            {statusText ? (
+              <small className="wit-muted wit-crumb-status">{statusText}</small>
+            ) : null}
+            <button
+              type="button"
+              className="wit-crumb-action"
+              disabled={!canSave}
+              title="Save (Shift+Cmd+Enter)"
+              onClick={() => void editorRef.current?.save()}
+            >
+              {editorHeader.saving ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              className="wit-crumb-action secondary"
+              disabled={!canReloadFromMarkdown}
+              title="Reload from markdown"
+              onClick={() => void editorRef.current?.reloadFromMarkdown()}
+            >
+              Reload
+            </button>
+            <button
+              type="button"
+              className="wit-crumb-arrow"
+              disabled={!prevId}
+              aria-label="Previous page"
+              onClick={() => goArrow(prevId, "previous")}
+            >
+              <ChevronLeftIcon />
+            </button>
+            <button
+              type="button"
+              className="wit-crumb-arrow"
+              disabled={!nextId}
+              aria-label="Next page"
+              onClick={() => goArrow(nextId, "next")}
+            >
+              <ChevronRightIcon />
+            </button>
           </div>
         </div>
       </header>
+
+      {error ? (
+        <article className="container contrast" inert={hideUi}>
+          <p>{error}</p>
+          <button type="button" onClick={() => void refresh()}>
+            Retry
+          </button>
+        </article>
+      ) : null}
 
       {dup.length > 0 ? (
         <article className="container contrast" inert={hideUi}>
@@ -513,139 +536,80 @@ export default function App() {
 
       <div className="wit-layout-outer">
         <div className="wit-layout">
-          {sidebarOpen ? (
-            <aside
-              className="wit-sidebar"
-              inert={hideUi}
-              style={{
-                width: hideUi ? 0 : sidebarWidthPx,
-                flex: hideUi ? "0 0 0px" : `0 0 ${sidebarWidthPx}px`,
-              }}
-              aria-label="Pages and outline"
-            >
-              <div className="wit-sidebar-topbar">
-                <span className="wit-sidebar-topbar-label">Pages</span>
-                <button
-                  type="button"
-                  className="wit-sidebar-float-toggle wit-sidebar-float-toggle--in-panel"
-                  aria-label="Hide pages panel"
-                  aria-expanded={true}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <ChevronDownIcon />
-                </button>
-              </div>
-
-              {loading ? (
-                <p className="wit-sidebar-status">Loading pages…</p>
-              ) : null}
-              {error ? (
-                <article className="contrast wit-sidebar-status">
-                  <p>{error}</p>
-                  <button type="button" onClick={() => void refresh()}>
-                    Retry
-                  </button>
-                </article>
-              ) : null}
-
-              <div className="wit-sidebar-body">
-                <SidebarTree
-                  pages={pages}
-                  selectedId={resolvedSelectedId}
-                  onSelect={navigate}
-                  onStructureChange={handleStructureChange}
-                  onPageCreated={navigate}
-                  onPageRenamed={handlePageRenamed}
-                  onPageDeleted={handlePageDeleted}
-                  unsavedPageId={
-                    editorHeader.dirty ? resolvedSelectedId : null
-                  }
-                />
-              </div>
-            </aside>
-          ) : null}
-
-          {sidebarOpen ? (
-            <div
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize pages panel"
-              aria-valuenow={Math.round(sidebarWidthPx)}
-              aria-valuemin={SIDEBAR_WIDTH_MIN}
-              aria-valuemax={Math.round(sidebarWidthMax())}
-              className="wit-layout-resizer"
-              inert={hideUi}
-              tabIndex={0}
-              onPointerDown={onLayoutResizerPointerDown}
-              onPointerMove={onLayoutResizerPointerMove}
-              onPointerUp={onLayoutResizerPointerUp}
-              onPointerCancel={onLayoutResizerPointerUp}
-              onKeyDown={(e) => {
-                const step = 12;
-                const maxW = sidebarWidthMax();
-                if (e.key === "ArrowLeft") {
-                  e.preventDefault();
-                  setSidebarWidthPx((w) =>
-                    Math.max(SIDEBAR_WIDTH_MIN, w - step),
-                  );
-                } else if (e.key === "ArrowRight") {
-                  e.preventDefault();
-                  setSidebarWidthPx((w) => Math.min(maxW, w + step));
-                }
-              }}
-            />
-          ) : null}
-
           <main className="wit-main">
             <div
-              className={
-                sidebarOpen
-                  ? "wit-sidebar-collapse-rail wit-sidebar-collapse-rail--with-sidebar"
-                  : "wit-sidebar-collapse-rail"
-              }
+              className="wit-sidebar-collapse-rail"
               aria-label="Sidebar controls"
               inert={hideUi}
             >
-              {!sidebarOpen ? (
-                <button
-                  type="button"
-                  className="wit-sidebar-float-toggle"
-                  aria-label="Show pages panel"
-                  aria-expanded={false}
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  <ChevronRightIcon />
-                </button>
-              ) : null}
+              <button
+                type="button"
+                className="wit-sidebar-float-toggle"
+                aria-label={
+                  columnMode === "tree" ? "Open selected page" : "Show file tree"
+                }
+                aria-pressed={columnMode === "tree"}
+                onClick={onTreeIcon}
+              >
+                <TreeIcon />
+              </button>
+              <WitSettingsMenu
+                accent={accent}
+                onAccentChange={setAccent}
+                typeface={typeface}
+                onTypefaceChange={setTypeface}
+                sizeBump={sizeBump}
+                onSizeBumpChange={setSizeBump}
+                bgTheme={bgTheme}
+                onBgThemeChange={setBgTheme}
+                hideUi={hideUi}
+                onHideUiChange={setHideUi}
+              />
               <WitCollapsedPinControl
                 pages={pages}
                 onPreviewPin={openPinPreview}
               />
             </div>
             <div className="wit-main-body">
-              {!sidebarOpen &&
-              collapsedRouteLabel &&
-              !editorHeader.titleHeadingInView ? (
-                <nav
-                  className="wit-main-route-context"
-                  aria-label="Current page in outline"
-                  inert={hideUi}
+              <div
+                className="wit-editor-mount"
+                data-hidden={treeVisible ? "true" : "false"}
+                inert={treeVisible}
+              >
+                <PageEditor
+                  ref={editorRef}
+                  pageId={resolvedSelectedId}
+                  editorSession={editorSession}
+                  pages={pages}
+                  sheet={sheet}
+                  colorScheme={colorScheme}
+                  onNavigateToPage={navigate}
+                  onHeaderStateChange={setEditorHeader}
+                  scrollTarget={scrollTarget}
+                  onScrollAnchorChange={recordAnchor}
+                />
+              </div>
+              {columnMode === "tree" ? (
+                <div
+                  className="wit-column-tree-slot"
+                  data-hidden={hideUi ? "true" : "false"}
                 >
-                  {collapsedRouteLabel}
-                </nav>
+                  <ColumnTree
+                    pages={pages}
+                    selectedId={treeSelectionId}
+                    hideUi={hideUi}
+                    unsavedPageId={
+                      editorHeader.dirty ? resolvedSelectedId : null
+                    }
+                    onSelect={setTreeSelectionId}
+                    onOpen={openPage}
+                    onStructureChange={handleStructureChange}
+                    onPageCreated={handlePageCreated}
+                    onPageRenamed={handlePageRenamed}
+                    onPageDeleted={handlePageDeleted}
+                  />
+                </div>
               ) : null}
-              <PageEditor
-                ref={editorRef}
-                pageId={resolvedSelectedId}
-                editorSession={editorSession}
-                pages={pages}
-                sheet={sheet}
-                colorScheme={colorScheme}
-                onNavigateToPage={navigate}
-                onHeaderStateChange={setEditorHeader}
-                scrollTarget={scrollTarget}
-                onScrollAnchorChange={recordAnchor}
-              />
             </div>
           </main>
           <PinnedBlockPreviewModal

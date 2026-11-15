@@ -489,13 +489,23 @@ export function SidebarTree({
             disableDrop={interaction === 'jump'}
             onSelect={(nodes) => {
               const id = nodes[0]?.id
-              if (!id || id === selectedId) {
+              if (interaction === 'jump' || !id || id === selectedId) {
                 return
               }
               if (onSelect(id) === false && selectedId) {
                 queueMicrotask(() => treeRef.current?.select(selectedId, { focus: false }))
               }
             }}
+            /* Jump opens on every click, including the row that is already selected. */
+            onActivate={
+              interaction === 'jump'
+                ? (node) => {
+                    if (onSelect(node.id) === false && selectedId) {
+                      queueMicrotask(() => treeRef.current?.select(selectedId, { focus: false }))
+                    }
+                  }
+                : undefined
+            }
             onMove={async ({ dragIds, parentId, index }) => {
               const patches = computeMovePatches(pages, dragIds, parentId, index)
               if (patches === null) {
