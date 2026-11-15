@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-11-15-chrome-bar-design.md`
 
+**Visual review:** The header's vertical padding, the tighter top padding on `.wit-main`, and the bar's alignment with the rail and the editor were set in the browser after this plan was written. Those measurements live in the spec. Do not re-apply the `0.35rem` / `0.3rem` header padding or the "shorter bar" checks below.
+
 ## Global Constraints
 
 - The path is text, not a button. Its label is `formatPageRouteCrumb(pageTitleTrail(...))` for the page loaded in the editor. An empty label reads "No page" in the muted color.
@@ -17,7 +19,7 @@
 - In the file tree the status text stays, right-aligned. It is every string from `editorStatusMessage`. The bar keeps its height when the status is empty. Hide UI hides the status with the rest of the bar.
 - Arrows use `adjacentPageIdsInTreeOrder` from the loaded editor page. An arrow is disabled only when that direction has no page.
 - The tree icon, while the tree is open, shows the loaded editor page. Its accessible name is "Show the open page". It is disabled while the tree is open and no page is loaded. A row click only highlights. A double-click still opens.
-- Header padding is `0.35rem` top and `0.3rem` bottom.
+- Header padding, `.wit-main`'s top padding, and the bar's alignment with the rail and the editor are the ones in the spec, not the shorter bar this plan originally described.
 - Save and Reload: padding `4px 10px`, font size `0.72rem`, font weight `500`, `1px` muted border, transparent background, muted text, radius `6px`, disabled opacity `0.45`. Save's label is "Save" or "Saving…". Reload's label and tooltip are "Reload from markdown".
 - Arrows are bare chevrons, muted, centered on the button line. Hover uses the body text color. Names stay "Previous page" and "Next page".
 - Rail order stays tree, gear, pin. Each hit target is `2rem` square and centered. The gear has no `summary::after` chevron. Its panel opens to the right of the icon.
@@ -235,7 +237,7 @@ git commit -m "Remove the page jump menu."
 
 **Interfaces:**
 - Consumes: the markup from Task 1
-- Produces: the compact buttons, bare arrows, shorter bar, centered gear, and folder icon described in the spec
+- Produces: the compact buttons, bare arrows, centered gear, and folder icon described in the spec. Bar padding and alignment come from the spec, including the visual-review note above.
 
 - [ ] **Step 1: Change the Reload label and the tree icon**
 
@@ -266,7 +268,7 @@ function TreeIcon() {
 
 - [ ] **Step 2: Shorten the bar and restyle the controls**
 
-Set `.wit-app-header` padding to `0.35rem` top and `0.3rem` bottom.
+The header padding this step originally set (`0.35rem` top, `0.3rem` bottom) was superseded after visual review. Use the padding and the rail/editor alignment in the spec.
 
 Replace `.wit-crumb-action` with:
 
@@ -418,7 +420,7 @@ Expected: PASS.
 
 With `npm --prefix frontend run dev` already running, confirm:
 
-- The bar is shorter. In the editor, the path is text, Save and Reload are compact outlined buttons with `6px` corners, Reload reads "Reload from markdown", and the arrows are bare icons on the same line.
+- In the editor, the path is text, Save and Reload are compact outlined buttons with `6px` corners, Reload reads "Reload from markdown", and the arrows are bare icons on the same line. The header padding, the gap above the editor, and the alignment with the rail and the editor match the spec.
 - Opening the tree hides the path, Save, Reload, and both arrows. A status message, when there is one, stays on the right. Highlighting a row does not bring the buttons back.
 - The tree icon returns to the page that was loaded, not the highlighted row. A double-click still opens the highlighted row. The icon is disabled in the tree when no page is loaded.
 - The gear has no chevron. The tree icon, gear, and pin sit on one center line. The gear panel opens to the right.

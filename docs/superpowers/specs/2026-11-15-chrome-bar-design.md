@@ -1,6 +1,6 @@
 # Chrome bar
 
-The top bar gets shorter, and its controls get smaller. The path is text again. It shows only while the editor is on screen. Save and Reload become compact outlined buttons, and the page arrows become bare icons. The rail icons line up, the gear loses its chevron, and the tree icon changes.
+The top bar's controls get smaller. The path is text again. It shows only while the editor is on screen. Save and Reload become compact outlined buttons, and the page arrows become bare icons. The rail icons line up, the gear loses its chevron, and the tree icon changes.
 
 This replaces the path button, the jump menu, the tree icon's return target, and the Save, Reload, and arrow styling in `docs/superpowers/specs/2026-11-15-chrome-layout-design.md`. It also replaces the Hide UI rail and gear placement in that spec and in `docs/superpowers/specs/2026-11-14-hide-ui-design.md`. The Hide UI control, its storage, the status picker, and the writing column's measure stay as those specs describe them.
 
@@ -12,7 +12,7 @@ The path renders only while the column is showing the editor and Hide UI is off.
 
 Save, Reload, and both arrows render with the path. They are absent in the file tree and while Hide UI is on. In the editor they act on the loaded page. The arrows use `adjacentPageIdsInTreeOrder` from that page, and an arrow is disabled only when that direction has no page.
 
-The status text stays visible in the file tree, right-aligned in the bar. It is every string from `editorStatusMessage`: the save error, "Markdown file changed outside the editor", "Unsaved changes", "Loading…", and the link notice. Highlighting a row does not change it. The bar keeps its shorter height when the status is empty. Hide UI hides this text with the rest of the bar.
+The status text stays visible in the file tree, right-aligned in the bar. It is every string from `editorStatusMessage`: the save error, "Markdown file changed outside the editor", "Unsaved changes", "Loading…", and the link notice. Highlighting a row does not change it. The bar keeps the same height when the status is empty. Hide UI hides this text with the rest of the bar.
 
 ## Returning from the tree
 
@@ -24,7 +24,15 @@ The jump menu is gone. `CrumbJumpMenu` is deleted, and `SidebarTree` no longer h
 
 ## Top bar
 
-The header padding is `0.35rem` on top and `0.3rem` on the bottom, down from `0.85rem` and `0.75rem`. The path and the cluster sit on that shorter row.
+The header keeps the `container` class. `.wit-app-header` overrides that centered width with `width: auto` and `max-width: none`. The bar's box runs from the rail's left edge to the editor's right edge at every viewport width.
+
+- Left edge: `margin-left: var(--pico-spacing)`, the same inset as `.wit-main`'s horizontal padding, which is where the rail starts.
+- Right edge: `margin-right: calc(var(--pico-spacing) + var(--wit-editor-frame))`. `--wit-editor-frame` is `1px`, the border on `.bn-container`.
+- The path stays on the editor's left edge: `padding-left: calc(var(--wit-sidebar-rail-width) + var(--wit-sidebar-rail-gap) + var(--wit-editor-frame))`.
+- The arrows stay on the editor's right edge: `padding-right: 0`.
+- The rail lengths are shared with `.wit-sidebar-collapse-rail`: `--wit-sidebar-rail-width: calc(2rem + 0.55rem)` and `--wit-sidebar-rail-gap: 0.35rem`.
+
+Vertical padding is `0.85rem` on top and `0.35rem` on the bottom. The path and the cluster sit near the bottom edge of that bar. `.wit-main` uses `padding-top: 0.35rem` instead of `var(--pico-spacing)`, so the editor starts close under the header. This replaces the earlier shorter bar (`0.35rem` top, `0.3rem` bottom, content near the top edge), which was set aside after visual review.
 
 Save and Reload:
 
@@ -70,7 +78,10 @@ The header still collapses over 240ms with `ease`, and `prefers-reduced-motion: 
 
 Checked in the running app:
 
-- the bar is shorter, and the path and buttons sit close to its top edge
+- the header's top padding is `0.85rem` and its bottom padding is `0.35rem`, and the path and buttons sit near the header's bottom edge
+- `.wit-main`'s top padding is `0.35rem`, so the editor sits close under the header
+- the header's left edge lines up with the rail's left edge, and its right edge lines up with the editor's right edge
+- the path's left edge lines up with the editor's left edge, and the arrows' right edge lines up with the editor's right edge, at every viewport width
 - Save and Reload are compact, outlined, and round-cornered, and Reload reads "Reload from markdown"
 - the arrows are bare icons, lined up with those buttons
 - the path, Save, Reload, and the arrows show in the editor, and all four are absent in the tree and while Hide UI is on

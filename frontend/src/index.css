@@ -59,6 +59,11 @@
   --pico-font-family-monospace: var(--wit-font-code);
   --pico-line-height: 1.65;
   --pico-border-radius: 2px;
+  /* Shared with the header so the bar tracks the rail and the editor frame. */
+  --wit-sidebar-rail-inner: 2rem;
+  --wit-sidebar-rail-width: calc(var(--wit-sidebar-rail-inner) + 0.55rem);
+  --wit-sidebar-rail-gap: 0.35rem;
+  --wit-editor-frame: 1px;
 }
 
 /* Optional typefaces: `data-typeface` on <html> (set by Settings). */
@@ -730,7 +735,7 @@ html:not([data-typeface]) .bn-editor {
 
 .bn-container {
   border-radius: var(--pico-border-radius);
-  border: 1px solid var(--pico-muted-border-color);
+  border: var(--wit-editor-frame) solid var(--pico-muted-border-color);
   box-shadow: none;
 }
 
@@ -779,8 +784,6 @@ html:not([data-typeface]) .bn-editor {
 
 /* Narrow in-flow column for the pin icon (and the expand chevron when the tree is closed). */
 .wit-sidebar-collapse-rail {
-  --wit-sidebar-rail-inner: 2rem;
-
   position: relative;
   /* Above BlockNote's side menu (20) so the gear and pin panels cover the column; under the header. */
   z-index: 21;
@@ -791,10 +794,10 @@ html:not([data-typeface]) .bn-editor {
   flex-direction: column;
   align-items: center;
   gap: 0.35rem;
-  width: calc(var(--wit-sidebar-rail-inner) + 0.55rem);
-  min-width: calc(var(--wit-sidebar-rail-inner) + 0.55rem);
+  width: var(--wit-sidebar-rail-width);
+  min-width: var(--wit-sidebar-rail-width);
   padding: 0.15rem 0.25rem 0.15rem 0;
-  margin-right: 0.35rem;
+  margin-right: var(--wit-sidebar-rail-gap);
   background: var(--wit-chrome-surface);
   transition: opacity 240ms ease;
 }
@@ -1306,6 +1309,8 @@ html[data-theme='dark'] .wit-pin-preview-card {
   flex-direction: row;
   align-items: stretch;
   padding: var(--pico-spacing);
+  /* Keep the writing close to this edge; the header owns the space above it. */
+  padding-top: 0.35rem;
   min-height: 0;
   overflow: hidden;
   overscroll-behavior: contain;
@@ -1582,8 +1587,19 @@ html[data-theme='dark'] .wit-pin-preview-card {
   z-index: 22;
   display: grid;
   grid-template-rows: 1fr;
-  padding-top: 0.35rem;
-  padding-bottom: 0.3rem;
+  box-sizing: border-box;
+  /* Drop the centered container width. The bar runs from the rail's left edge to the editor's right edge. */
+  width: auto;
+  max-width: none;
+  margin-left: var(--pico-spacing);
+  margin-right: calc(var(--pico-spacing) + var(--wit-editor-frame));
+  /* Path stays on the editor's left edge; the arrows sit on its right edge. */
+  padding-top: 0.85rem;
+  padding-bottom: 0.35rem;
+  padding-left: calc(
+    var(--wit-sidebar-rail-width) + var(--wit-sidebar-rail-gap) + var(--wit-editor-frame)
+  );
+  padding-right: 0;
   margin-bottom: 0;
   font-family: var(--wit-font-sidebar);
   background: var(--pico-background-color);
