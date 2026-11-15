@@ -20,6 +20,9 @@ frontend/dist/
 .idea/
 .vscode/
 
+# Agent scratch (task briefs, review diffs). Not part of the app.
+.superpowers/
+
 # Local config (copy from .env.example)
 .env
 

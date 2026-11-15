@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
 
 import {
   type AccentName,
@@ -123,43 +122,12 @@ export function WitSettingsMenu({
       document.removeEventListener("click", onDocumentClick);
       document.documentElement.classList.remove("wit-settings-open");
     };
-    // Portaling remounts the <details>, so rebind to the new node.
-  }, [hideUi]);
+  }, []);
 
-  useLayoutEffect(() => {
-    if (!hideUi) {
-      return;
-    }
-    const el = detailsRef.current;
-    if (!el) {
-      return;
-    }
-    const place = () => {
-      const header = document.querySelector(".wit-app-header");
-      if (!(header instanceof HTMLElement)) {
-        return;
-      }
-      const rect = header.getBoundingClientRect();
-      const pad =
-        Number.parseFloat(getComputedStyle(header).paddingRight) || 0;
-      el.style.top = "0.85rem";
-      el.style.right = `${Math.max(0, window.innerWidth - rect.right + pad)}px`;
-    };
-    place();
-    window.addEventListener("resize", place);
-    return () => {
-      window.removeEventListener("resize", place);
-      el.style.top = "";
-      el.style.right = "";
-    };
-  }, [hideUi]);
-
-  const menu = (
+  return (
     <details
       ref={detailsRef}
-      className={
-        hideUi ? "wit-app-settings" : "wit-app-settings wit-app-settings--rail"
-      }
+      className="wit-app-settings wit-app-settings--rail"
     >
       <summary className="wit-app-settings-summary" aria-label="Settings">
         <GearIcon />
@@ -254,9 +222,4 @@ export function WitSettingsMenu({
       </div>
     </details>
   );
-
-  if (hideUi) {
-    return createPortal(menu, document.body);
-  }
-  return menu;
 }

@@ -1578,12 +1578,12 @@ html[data-theme='dark'] .wit-pin-preview-card {
   flex-shrink: 0;
   position: sticky;
   top: 0;
-  /* Over the rail, so the crumb menu can drop across it. */
+  /* Sticky, and above the rail. */
   z-index: 22;
   display: grid;
   grid-template-rows: 1fr;
-  padding-top: 0.85rem;
-  padding-bottom: 0.75rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.3rem;
   margin-bottom: 0;
   font-family: var(--wit-font-sidebar);
   background: var(--pico-background-color);
@@ -1593,8 +1593,8 @@ html[data-theme='dark'] .wit-pin-preview-card {
     padding-bottom 240ms ease;
 }
 
-/* Search results and the gear panel drop below the header, so the clip only
-   holds while hidden and for the length of the reveal. */
+/* The clip only holds while the header is hidden and for the length of the
+   reveal. The gear panel opens beside the rail icon, not inside the header. */
 .wit-app-header-clip {
   display: flex;
   align-items: center;
@@ -1641,8 +1641,7 @@ html[data-theme='dark'] .wit-pin-preview-card {
 }
 
 /* Fixed blue fill — does not track accent. */
-.wit-app-header-save button.secondary,
-.wit-crumb-action.secondary {
+.wit-app-header-save button.secondary {
   --pico-secondary-background: #3d5688;
   --pico-secondary-border: var(--pico-secondary-background);
   --pico-secondary-hover-background: #4a679c;
@@ -1662,27 +1661,22 @@ html[data-theme='dark'] .wit-pin-preview-card {
   min-width: 0;
 }
 
-.wit-crumb-button {
+.wit-crumb-path {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 0.2rem 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
+  padding: 0;
   text-align: left;
   font: inherit;
+  line-height: 1.2;
   font-family: var(--wit-font-sidebar);
-  /* Pico rebinds --pico-color inside buttons to the inverse (white). */
   color: inherit;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
 }
 
-.wit-crumb-button:disabled {
-  cursor: default;
+.wit-crumb-path[data-empty="true"] {
   color: var(--pico-muted-color);
 }
 
@@ -1693,6 +1687,8 @@ html[data-theme='dark'] .wit-pin-preview-card {
   gap: 0.35rem;
   flex: 0 0 auto;
   min-width: 0;
+  min-height: calc(0.72rem * 1.2 + 8px + 2px);
+  margin-left: auto;
 }
 
 .wit-crumb-status {
@@ -1705,39 +1701,45 @@ html[data-theme='dark'] .wit-pin-preview-card {
 
 .wit-crumb-action {
   margin: 0;
-  padding: 0.28rem 0.55rem;
+  padding: 4px 10px;
   min-height: 0;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  font-weight: 500;
   line-height: 1.2;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--pico-muted-color);
+  box-shadow: none;
+}
+
+.wit-crumb-action:disabled {
+  opacity: 0.45;
 }
 
 .wit-crumb-arrow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: auto;
+  height: auto;
   margin: 0;
-  padding: 0;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
+  padding: 0 0.15rem;
+  border: none;
+  border-radius: 0;
   background: transparent;
   color: var(--pico-muted-color);
   box-shadow: none;
 }
 
-.wit-crumb-menu {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 0.35rem);
-  left: 0;
-  width: 20rem;
-  max-height: min(24rem, 70vh);
-  overflow: auto;
-  padding: 0.4rem;
-  border: 1px solid var(--pico-muted-border-color);
-  border-radius: var(--pico-border-radius);
-  background: var(--pico-dropdown-background-color, var(--pico-background-color));
+.wit-crumb-arrow:hover:not(:disabled) {
+  color: inherit;
+}
+
+.wit-crumb-action:focus-visible,
+.wit-crumb-arrow:focus-visible {
+  outline: 2px solid var(--pico-primary, #3d5a4a);
+  outline-offset: 2px;
 }
 
 .wit-editor-mount,
@@ -1747,10 +1749,6 @@ html[data-theme='dark'] .wit-pin-preview-card {
   min-width: 0;
   display: flex;
   flex-direction: column;
-}
-
-.wit-column-tree-slot[data-hidden='true'] {
-  display: none;
 }
 
 /* Not display: none, which drops the editor's scroll offset. */
@@ -1780,9 +1778,7 @@ body:has(.wit-editor-mount[data-hidden='true']) > .bn-root {
 }
 
 .wit-column-tree .wit-tree-wrap,
-.wit-column-tree .wit-tree-viewport,
-.wit-crumb-menu .wit-tree-wrap,
-.wit-crumb-menu .wit-tree-viewport {
+.wit-column-tree .wit-tree-viewport {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -1807,8 +1803,8 @@ body:has(.wit-editor-mount[data-hidden='true']) > .bn-root {
   cursor: pointer;
   user-select: none;
   list-style: none;
-  width: 2.2rem;
-  height: 2.2rem;
+  width: 2rem;
+  height: 2rem;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -1836,6 +1832,10 @@ body:has(.wit-editor-mount[data-hidden='true']) > .bn-root {
 }
 
 .wit-app-settings-summary::-webkit-details-marker {
+  display: none;
+}
+
+.wit-app-settings-summary::after {
   display: none;
 }
 
@@ -2586,23 +2586,12 @@ html[data-hide-ui="on"] .wit-layout-resizer {
   pointer-events: none;
 }
 
-html[data-hide-ui="on"] .wit-sidebar-collapse-rail {
-  opacity: 0;
-  pointer-events: none;
-}
-
 html[data-hide-ui="on"] .wit-main-route-context {
   max-height: 0;
   margin: 0;
   opacity: 0;
   overflow: hidden;
   pointer-events: none;
-}
-
-html[data-hide-ui="on"] .wit-app-settings {
-  position: fixed;
-  z-index: 40;
-  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

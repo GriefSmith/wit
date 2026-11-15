@@ -5,7 +5,6 @@ import type { PageMeta } from "../types";
 type Props = {
   pages: PageMeta[];
   selectedId: string | null;
-  hideUi: boolean;
   unsavedPageId: string | null;
   onSelect: (id: string) => void;
   onOpen: (id: string) => void;
@@ -18,7 +17,6 @@ type Props = {
 export function ColumnTree({
   pages,
   selectedId,
-  hideUi,
   unsavedPageId,
   onSelect,
   onOpen,
@@ -29,11 +27,10 @@ export function ColumnTree({
 }: Props) {
   return (
     <div className="wit-column-tree">
-      <PageSearch pages={pages} onSelect={onSelect} hideUi={hideUi} />
+      <PageSearch pages={pages} onSelect={onSelect} />
       <SidebarTree
         pages={pages}
         selectedId={selectedId}
-        interaction="manage"
         onSelect={onSelect}
         onOpen={onOpen}
         onStructureChange={onStructureChange}

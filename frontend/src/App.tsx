@@ -8,7 +8,6 @@ import {
 } from "react";
 
 import { ColumnTree } from "./components/ColumnTree";
-import { CrumbJumpMenu } from "./components/CrumbJumpMenu";
 import { PageEditor } from "./components/PageEditor";
 import { PinnedBlockPreviewModal } from "./components/PinnedBlockPreviewModal";
 import { WitCollapsedPinControl } from "./components/WitCollapsedPinControl";
@@ -82,7 +81,13 @@ function TreeIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M12 3v18M12 8h7M12 16H5"
+        d="M3 5h6l2 2h10v6H3V5z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 17h18M3 21h12"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
@@ -112,9 +117,7 @@ export default function App() {
   const colorScheme = resolveEffectiveColorScheme(bgTheme, systemColorScheme);
   const [columnMode, setColumnMode] = useState<"page" | "tree">("page");
   const [treeSelectionId, setTreeSelectionId] = useState<string | null>(null);
-  const [crumbMenuOpen, setCrumbMenuOpen] = useState(false);
   const [focusSearch, setFocusSearch] = useState(false);
-  const crumbButtonRef = useRef<HTMLButtonElement>(null);
 
   const pages = useMemo(() => data?.pages ?? [], [data]);
 
@@ -180,11 +183,13 @@ export default function App() {
     document.title = selectedTitle ? `${selectedTitle} · wit` : "wit";
   }, [selectedTitle]);
 
-  const treeVisible = columnMode === "tree" && !hideUi;
-  const pathPageId = treeVisible ? treeSelectionId : resolvedSelectedId;
-  const crumbText = formatPageRouteCrumb(pageTitleTrail(pages, pathPageId));
-  const { prevId, nextId } = pathPageId
-    ? adjacentPageIdsInTreeOrder(pages, pathPageId)
+  const treeVisible = columnMode === "tree";
+  const showEditorChrome = columnMode === "page" && !hideUi;
+  const crumbText = formatPageRouteCrumb(
+    pageTitleTrail(pages, resolvedSelectedId),
+  );
+  const { prevId, nextId } = resolvedSelectedId
+    ? adjacentPageIdsInTreeOrder(pages, resolvedSelectedId)
     : { prevId: null, nextId: null };
   const statusText = editorStatusMessage({
     saveError: editorHeader.saveError,
@@ -242,7 +247,6 @@ export default function App() {
         return false;
       }
       setColumnMode("page");
-      setCrumbMenuOpen(false);
       return true;
     },
     [navigate],
@@ -251,18 +255,17 @@ export default function App() {
   const showTree = useCallback(() => {
     setTreeSelectionId(resolvedSelectedId);
     setColumnMode("tree");
-    setCrumbMenuOpen(false);
   }, [resolvedSelectedId]);
 
   const onTreeIcon = useCallback(() => {
     if (columnMode === "tree") {
-      if (treeSelectionId) {
-        openPage(treeSelectionId);
+      if (resolvedSelectedId) {
+        openPage(resolvedSelectedId);
       }
       return;
     }
     showTree();
-  }, [columnMode, openPage, showTree, treeSelectionId]);
+  }, [columnMode, openPage, resolvedSelectedId, showTree]);
 
   const goArrow = useCallback(
     (id: string | null, direction: "next" | "previous") => {
@@ -273,13 +276,10 @@ export default function App() {
         editorRef.current?.openNeighbor(id, direction) ?? navigate(id);
       if (opened) {
         setColumnMode("page");
-        setCrumbMenuOpen(false);
       }
     },
     [navigate],
   );
-
-  const closeCrumbMenu = useCallback(() => setCrumbMenuOpen(false), []);
 
   const handlePageCreated = useCallback((id: string) => {
     setTreeSelectionId(id);
@@ -405,109 +405,91 @@ export default function App() {
   useEffect(() => {
     if (hideUi) {
       setPreviewPin(null);
-      setCrumbMenuOpen(false);
     }
   }, [hideUi]);
 
   useEffect(() => {
-    if (!focusSearch || columnMode !== "tree" || hideUi) {
+    if (!focusSearch || columnMode !== "tree") {
       return;
     }
     document.getElementById("wit-page-search-input")?.focus();
     setFocusSearch(false);
-  }, [columnMode, focusSearch, hideUi]);
+  }, [columnMode, focusSearch]);
 
   /** ⌘K (Ctrl+K off macOS) shows the tree and focuses its search. */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (hideUi) {
-        return;
-      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         if (columnMode !== "tree") {
           setTreeSelectionId(resolvedSelectedId);
           setColumnMode("tree");
         }
-        setCrumbMenuOpen(false);
         setFocusSearch(true);
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [columnMode, hideUi, resolvedSelectedId]);
+  }, [columnMode, resolvedSelectedId]);
 
   return (
     <div className="wit-app">
       <header className="container wit-app-header">
         <div className="wit-app-header-clip" inert={hideUi}>
-          <div className="wit-crumb">
-            <button
-              type="button"
-              ref={crumbButtonRef}
-              className="wit-crumb-button"
-              disabled={crumbText.length === 0}
-              aria-expanded={crumbMenuOpen}
-              aria-haspopup="menu"
-              onClick={() => {
-                if (crumbText.length === 0) {
-                  return;
-                }
-                setCrumbMenuOpen((open) => !open);
-              }}
-            >
-              {crumbText.length === 0 ? "No page" : crumbText}
-            </button>
-            {crumbMenuOpen ? (
-              <CrumbJumpMenu
-                pages={pages}
-                selectedId={pathPageId}
-                anchorRef={crumbButtonRef}
-                onOpen={openPage}
-                onClose={closeCrumbMenu}
-              />
-            ) : null}
-          </div>
+          {showEditorChrome ? (
+            <div className="wit-crumb">
+              <span
+                className="wit-crumb-path"
+                data-empty={crumbText.length === 0 ? "true" : "false"}
+              >
+                {crumbText.length === 0 ? "No page" : crumbText}
+              </span>
+            </div>
+          ) : null}
           <div className="wit-crumb-cluster">
             {statusText ? (
               <small className="wit-muted wit-crumb-status">{statusText}</small>
             ) : null}
-            <button
-              type="button"
-              className="wit-crumb-action"
-              disabled={!canSave}
-              title="Save (Shift+Cmd+Enter)"
-              onClick={() => void editorRef.current?.save()}
-            >
-              {editorHeader.saving ? "Saving…" : "Save"}
-            </button>
-            <button
-              type="button"
-              className="wit-crumb-action secondary"
-              disabled={!canReloadFromMarkdown}
-              title="Reload from markdown"
-              onClick={() => void editorRef.current?.reloadFromMarkdown()}
-            >
-              Reload
-            </button>
-            <button
-              type="button"
-              className="wit-crumb-arrow"
-              disabled={!prevId}
-              aria-label="Previous page"
-              onClick={() => goArrow(prevId, "previous")}
-            >
-              <ChevronLeftIcon />
-            </button>
-            <button
-              type="button"
-              className="wit-crumb-arrow"
-              disabled={!nextId}
-              aria-label="Next page"
-              onClick={() => goArrow(nextId, "next")}
-            >
-              <ChevronRightIcon />
-            </button>
+            {showEditorChrome ? (
+              <>
+                <button
+                  type="button"
+                  className="wit-crumb-action"
+                  disabled={!canSave}
+                  title="Save (Shift+Cmd+Enter)"
+                  onClick={() => void editorRef.current?.save()}
+                >
+                  {editorHeader.saving ? "Saving…" : "Save"}
+                </button>
+                <button
+                  type="button"
+                  className="wit-crumb-action"
+                  disabled={!canReloadFromMarkdown}
+                  title="Reload from markdown"
+                  onClick={() => void editorRef.current?.reloadFromMarkdown()}
+                >
+                  Reload from markdown
+                </button>
+                <button
+                  type="button"
+                  className="wit-crumb-arrow"
+                  disabled={!prevId}
+                  aria-label="Previous page"
+                  onClick={() => goArrow(prevId, "previous")}
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <button
+                  type="button"
+                  className="wit-crumb-arrow"
+                  disabled={!nextId}
+                  aria-label="Next page"
+                  onClick={() => goArrow(nextId, "next")}
+                >
+                  <ChevronRightIcon />
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       </header>
@@ -540,15 +522,15 @@ export default function App() {
             <div
               className="wit-sidebar-collapse-rail"
               aria-label="Sidebar controls"
-              inert={hideUi}
             >
               <button
                 type="button"
                 className="wit-sidebar-float-toggle"
                 aria-label={
-                  columnMode === "tree" ? "Open selected page" : "Show file tree"
+                  columnMode === "tree" ? "Show the open page" : "Show file tree"
                 }
                 aria-pressed={columnMode === "tree"}
+                disabled={columnMode === "tree" && !resolvedSelectedId}
                 onClick={onTreeIcon}
               >
                 <TreeIcon />
@@ -590,14 +572,10 @@ export default function App() {
                 />
               </div>
               {columnMode === "tree" ? (
-                <div
-                  className="wit-column-tree-slot"
-                  data-hidden={hideUi ? "true" : "false"}
-                >
+                <div className="wit-column-tree-slot">
                   <ColumnTree
                     pages={pages}
                     selectedId={treeSelectionId}
-                    hideUi={hideUi}
                     unsavedPageId={
                       editorHeader.dirty ? resolvedSelectedId : null
                     }
